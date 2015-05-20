@@ -22,6 +22,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "if"							{ return TK_IF; }
 "else" 							{ return TK_ELSE; }
 "int" 							{ return TK_TIPO_INT; }
+"char"       { return TK_TIPO_CHAR; }
 "float" 						{ return TK_TIPO_STRING;}
 "string"						{ return TK_TIPO_FLOAT; }
 "while" 						{ return TK_WHILE; }
