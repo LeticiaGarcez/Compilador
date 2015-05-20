@@ -24,6 +24,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "int" 							{ return TK_TIPO_INT; }
 "float" 						{ return TK_TIPO_STRING;}
 "string"						{ return TK_TIPO_FLOAT; }
+"char"       {return TK_TIPO_CHAR;}
 "while" 						{ return TK_WHILE; }
 "for" 							{ return TK_FOR; }
 "switch" 						{ return TK_SWITCH; }
