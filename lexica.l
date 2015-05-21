@@ -15,21 +15,21 @@ ID {LETRA}({LETRA}|{NUM})*
 
 %%
 
-"\n"		{}
-
 
 "main"							{ return TK_MAIN;}
 "if"							{ return TK_IF; }
 "else" 							{ return TK_ELSE; }
-"int" 							{ return TK_TIPO_INT; }
-"float" 						{ return TK_TIPO_STRING;}
-"string"						{ return TK_TIPO_FLOAT; }
-"char"       {return TK_TIPO_CHAR;}
+"int" 							{ yylval.label = "int"; return TK_TIPO_INT; }
+"float" 						{ yylval.label = "float"; return TK_TIPO_FLOAT;}
+"string"						{ yylval.label = "string"; return TK_TIPO_STRING; }
+"char"       					{ yylval.label = "char"; return TK_TIPO_CHAR;}
 "while" 						{ return TK_WHILE; }
 "for" 							{ return TK_FOR; }
 "switch" 						{ return TK_SWITCH; }
 "case" 							{ return TK_CASE; }
- 							
+
+"var"							{return TK_VAR;}
+
 [=] 							{ return TK_ATRIB;}
 [<] 							{ return TK_MENOR;}
 [>] 							{ return TK_MAIOR;}
@@ -47,7 +47,11 @@ ID {LETRA}({LETRA}|{NUM})*
 [(){}[\];,]	{ return *yytext; }
 [+\-*/]		{ return *yytext; }
 
-{NUM}		{ yylval.traducao = yytext; return TK_NUM; }
+{NUM}		{ yylval.traducao = yytext; yylval.label = "int"; return TK_NUM; }
+{REAL}		{ yylval.traducao = yytext; yylval.label = "float"; return TK_REAL; }
+
+{CHAR}		{ yylval.traducao = yytext; yylval.label = "char"; return TK_CHAR; }
+
 {ID}		{ yylval.label = yytext; return TK_ID; }
 
 .			{ *yytext; }
