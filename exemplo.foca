@@ -1,0 +1,7 @@
+int main()
+{
+	var a = 3.2;
+	var s = 50;
+	var int b;
+	var int c;
+}
