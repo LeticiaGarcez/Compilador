@@ -1,7 +1,12 @@
 int main()
 {
-	var a = 3.2;
-	var s = 50;
-	var int b;
-	var int c;
+	var a = 9;
+	var b = 4;
+	var c = 0;
+	var d = 1;
+	a+c;
+	a+q;
+	a+q;
+	a+q;
+	a+q;
 }
