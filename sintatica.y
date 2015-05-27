@@ -19,6 +19,7 @@ struct meta_variavel
 
 struct atributos
 {
+	string tipoReal;
 	string tipo;
 	string label;
 	string traducao;
@@ -29,7 +30,8 @@ struct operacao
 	string tipoEsquerda;
 	string tipoDireita;
 	string tipoResultante;
-	char operacao;
+	string tipoReal;
+	string operacao;
 };
 
 string geraVar();
@@ -39,7 +41,7 @@ pair<bool, int> isIn(string, vector<meta_variavel>);
 string use_meta_var(string, string);
 pair<bool, int> isIn(string, vector<meta_variavel>);
 void adicionaOperacoes();
-string getTipoResultante(string, string, char);
+operacao getTipoResultante(string, string, string);
 
 int yylex(void);
 void yyerror(string);
@@ -76,7 +78,7 @@ void yyerror(string);
 
 S 			: TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 			{
-				 cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n #include<string.h>\n#include<stdio.h>\n#define true 1 \n #define false 0 \nint main(void)\n{\n" << $5.traducao << "\treturn 0;\n}" << endl;  
+				 cout << "/*Compilador FOCA*/\n" << "#include <iostream> \n#include <string.h> \n#include <stdio.h>\n#define true 1 \n#define false 0 \nint main(void)\n{\n" << $5.traducao << "\treturn 0;\n}" << endl;  
 			}
 			;
 
@@ -100,35 +102,48 @@ COMANDO 	: ATRIB
 			| OPERACAO
 			;
 
-OPERACAO 	: ARITIMETICO
+OPERACAO 	: ARITMETICO
 			| LOGICO
 			| RELACIONAL
 			;
 
-ARITIMETICO	: ARITIMETICO TK_MAIS ARITIMETICO
+ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " " + $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
+			
 			}
-			| ARITIMETICO TK_MENOR ARITIMETICO
+			| ARITMETICO TK_MENOR ARITMETICO
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '-');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
 			}
 			
-			| ARITIMETICO TK_MULT ARITIMETICO
+			| ARITMETICO TK_MULT ARITMETICO
 			{	
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
 			}
-			| ARITIMETICO TK_RAZAO ARITIMETICO
+			| ARITMETICO TK_RAZAO ARITMETICO
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " "+$2.traducao+" " + $3.label+ ";\n";
 			}
 			|OP
 			;
@@ -136,27 +151,39 @@ ARITIMETICO	: ARITIMETICO TK_MAIS ARITIMETICO
 
 RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_MENOR RELACIONAL
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_IGUAL RELACIONAL
 			{
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_DIFERENTE RELACIONAL
 			{ 
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+				
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			|OP
 			;
@@ -164,27 +191,39 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 
 LOGICO		: LOGICO TK_AND LOGICO
 			{ 
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}	
 			| LOGICO TK_OR LOGICO
 			{ 
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_OR RELACIONAL
 			{ 
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_AND RELACIONAL
 			{ 
-				$$.tipo = getTipoResultante($1.tipo, $2.tipo, '+');
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;
+
 				$$.label = geraVar();	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.tipo + " "+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			|OP
 			;
@@ -192,7 +231,6 @@ LOGICO		: LOGICO TK_AND LOGICO
 
 OP			: TK_NUM
 			{
-				$$.tipo = $1.tipo;
 				$$.label =  geraVar();
 				$$.traducao = "\t" + $1.tipo + " " + $$.label + " = " + $1.traducao + ";\n";			
 			}
@@ -206,12 +244,17 @@ OP			: TK_NUM
 				$$.label =  geraVar();
 				$$.traducao = "\t" + $1.tipo + " " + $$.label + " = " + $1.traducao + ";\n";			
 			}
+			| TK_REAL
+			{
+				$$.label =  geraVar();
+				$$.traducao = "\t" + $1.tipo + " " + $$.label + " = " + $1.traducao + ";\n";			
+			}
 			;
 
 
 ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 			{
-				$$.traducao = "\t" + $4.tipo + use_meta_var($2.label, $4.tipo) + " = " + $4.traducao+ ";\n";
+				$$.traducao = "\t" + $4.tipo +" "+ use_meta_var($2.label, $4.tipo) + " = " + $4.traducao+ ";\n";
 			}
 			| TK_VAR TK_ID TK_ATRIB OPERACAO
 			{
@@ -219,7 +262,7 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 			}
 			| TK_VAR ATRIB TK_ID
 			{
-				$$.traducao = "\t " + $2.tipo + use_meta_var($3.label, $2.tipo) +";\n";
+				$$.traducao = "\t " + $2.tipo +" " + use_meta_var($3.label, $2.tipo) +";\n";
  			}
  			| TK_ID TK_ATRIB ATRIB
  			{
@@ -230,41 +273,13 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 			 	$$.traducao = $3.traducao+ "\t"+ " " + use_meta_var($1.label, $3.tipo) + " = " + $3.label+ ";\n";
  			}
  			| TK_TIPO_INT
- 			{
-				$$.tipo = $1.tipo + " ";
-			}
 			| TK_TIPO_BOOL
-			{
-				$$.tipo = $1.tipo + " ";
- 			}
  			| TK_TIPO_FLOAT
- 			{
-				$$.tipo = $1.tipo + " ";
- 			}
  			| TK_TIPO_CHAR
- 			{
-				$$.tipo = $1.tipo + " ";
- 			}
  			| TK_NUM
- 			{
- 				$$.traducao = $1.traducao + " ";
-				$$.tipo = $1.tipo + " ";
- 			}
  			| TK_REAL
- 			{
- 				$$.traducao = $1.traducao + " ";
-				$$.tipo = $1.tipo + " ";
- 			}
 			| TK_CHAR
- 			{
- 				$$.traducao = $1.traducao + " ";
-				$$.tipo = $1.tipo + " ";
- 			}
 			| TK_BOOL
- 			{
- 				$$.traducao = $1.traducao + " ";
-				$$.tipo = $1.tipo + " ";
- 			}
  
 
 %%
@@ -296,20 +311,46 @@ void yyerror( string MSG )
 
 void adicionaOperacoes(){
 	operacao op; 
-	op.tipoDireita = "int"; op.tipoEsquerda = "int"; op.tipoResultante = "int"; op.operacao = '+';
+	//ARITMETICOs
+	op.tipoDireita = "int";		op.tipoEsquerda = "int";	op.tipoResultante = "int";		op.tipoReal = "int";	op.operacao = "ARITMETICO";
+	list_op.push_back(op);
+	op.tipoDireita = "int";		op.tipoEsquerda = "float";	op.tipoResultante = "float";	op.tipoReal = "float";	op.operacao = "ARITMETICO";
+	list_op.push_back(op);
+	op.tipoDireita = "float";	op.tipoEsquerda = "float";	op.tipoResultante = "float";	op.tipoReal = "float";	op.operacao = "ARITMETICO";
+	list_op.push_back(op);
+	//relacionais
+	op.tipoDireita = "int";		op.tipoEsquerda = "int";	op.tipoResultante = "int";		op.tipoReal = "bool";	op.operacao = "relacional";
+	list_op.push_back(op);
+	op.tipoDireita = "int";		op.tipoEsquerda = "float";	op.tipoResultante = "int";		op.tipoReal = "bool";	op.operacao = "relacional";
+	list_op.push_back(op);
+	op.tipoDireita = "float";	op.tipoEsquerda = "float";	op.tipoResultante = "int"; 		op.tipoReal = "bool";	op.operacao = "relacional";
+	list_op.push_back(op);
+	op.tipoDireita = "char";	op.tipoEsquerda = "char";	op.tipoResultante = "int"; 		op.tipoReal = "bool";	op.operacao = "relacional";
+	list_op.push_back(op);
+	op.tipoDireita = "bool";	op.tipoEsquerda = "bool";	op.tipoResultante = "int"; 		op.tipoReal = "bool";	op.operacao = "relacional";
+	list_op.push_back(op);
+	//logicos
+	op.tipoDireita = "bool";	op.tipoEsquerda = "bool";	op.tipoResultante = "int"; 		op.tipoReal = "bool";	op.operacao = "logico";
 	list_op.push_back(op);
 
 }
 
-string getTipoResultante(string tipoDireita, string tipoEsquerda, char operacao){
+operacao getTipoResultante(string tipoDireita, string tipoEsquerda, string op){
 	int i;
 	for (i = 0; i < list_op.size(); i++)
+	{
+		if(list_op[i].tipoDireita == tipoDireita and list_op[i].tipoEsquerda == tipoEsquerda and list_op[i].operacao == op )
 		{
-			if(list_op[i].tipoDireita == tipoDireita and list_op[i].tipoEsquerda == tipoEsquerda and list_op[i].operacao==operacao )
-			{
-				return list_op[i].tipoResultante;
-			}
+			return list_op[i];
 		}
+		if(list_op[i].tipoEsquerda == tipoDireita and list_op[i].tipoDireita == tipoEsquerda and list_op[i].operacao == op )
+		{
+			return list_op[i];
+		}
+	}
+	operacao operacaoErrada;
+	operacaoErrada.tipoReal = " "; 
+	return operacaoErrada;
 }
 
 
