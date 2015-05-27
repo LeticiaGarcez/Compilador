@@ -13,8 +13,9 @@ LETRA [A-Za-z_]
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
-CHAR \'({LETRA}|{NUM})\'
+CHAR \'.\'
 ID {LETRA}({LETRA}|{NUM})*
+BOOL "true"|"false"
 
 
 %%
@@ -27,20 +28,23 @@ ID {LETRA}({LETRA}|{NUM})*
 "float" 						{yylval.label = "float"; return TK_TIPO_FLOAT;}
 "string"						{yylval.label = "string"; return TK_TIPO_STRING; }
 "char"       					{yylval.label = "char"; return TK_TIPO_CHAR;}
-"boolean"       				{yylval.label = "boolean";return TK_TIPO_BOOLEAN;}
+"bool"       					{yylval.tipo = "int"; return TK_TIPO_BOOL;}
 "while" 						{return TK_WHILE; }
 "for" 							{return TK_FOR; }
 "switch" 						{return TK_SWITCH; }
 "case" 							{return TK_CASE; }
-"true"							{yylval.label = "true";return TK_BOOLEAN;}
-"false"							{yylval.label = "false";return TK_BOOLEAN;}
 
 "var"							{return TK_VAR;}
 
 [=] 							{return TK_ATRIB;}
-
 [<] 							{yylval.traducao = yytext; return TK_MENOR;}
 [>] 							{yylval.traducao = yytext; return TK_MAIOR;}
+
+[+] 							{yylval.traducao = yytext; return TK_MAIS;}
+[-] 							{yylval.traducao = yytext; return TK_MENOS;}
+[*] 							{yylval.traducao = yytext; return TK_MULT;}
+[/] 							{yylval.traducao = yytext; return TK_RAZAO;}
+
 "=!"							{yylval.traducao = yytext; return TK_DIFERENTE; }
 "=="							{yylval.traducao = yytext; return TK_IGUAL; }
 
@@ -56,13 +60,10 @@ ID {LETRA}({LETRA}|{NUM})*
 [(){}[\];,]	{return *yytext; }
 [+\-*/]		{return *yytext; }
 
-{NUM}		{yylval.traducao = yytext; yylval.label = "int"; return TK_NUM; }
-{REAL}		{yylval.traducao = yytext; yylval.label = "float"; return TK_REAL; }
-
-
-
-{CHAR}		{yylval.traducao = yytext; yylval.label = "char"; return TK_CHAR; }
-
+{NUM}		{yylval.traducao = yytext; yylval.tipo = "int"; return TK_NUM; }
+{REAL}		{yylval.traducao = yytext; yylval.tipo = "float"; return TK_REAL; }
+{CHAR}		{yylval.traducao = yytext; yylval.tipo = "char"; return TK_CHAR; }
+{BOOL}		{ yylval.tipo = "int"; yylval.traducao = yytext; return TK_BOOL; } 
 {ID}		{yylval.label = yytext; return TK_ID; }
 
 

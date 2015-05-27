@@ -1,12 +1,5 @@
 int main()
 {
-	var a = 9;
-	var b = 4;
-	var c = 0;
-	var d = 1;
-	a+c;
-	a+q;
-	a+q;
-	a+q;
-	a+q;
+	var a = 1;
+	var b = 3 + 3 + 4;
 }
