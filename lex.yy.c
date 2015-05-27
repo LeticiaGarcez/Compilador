@@ -844,7 +844,7 @@ YY_RULE_SETUP
 case 8:
 YY_RULE_SETUP
 #line 31 "lexica.l"
-{ yylval.tipo = "int"; return TK_TIPO_BOOL;}
+{yylval.tipo = "int"; return TK_TIPO_BOOL;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP

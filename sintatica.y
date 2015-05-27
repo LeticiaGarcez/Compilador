@@ -221,6 +221,14 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 			{
 				$$.traducao = "\t " + $2.tipo + use_meta_var($3.label, $2.tipo) +";\n";
  			}
+ 			| TK_ID TK_ATRIB ATRIB
+ 			{
+				$$.traducao = "\t" + use_meta_var($1.label, $3.tipo) + " = " + $3.traducao+ ";\n";
+ 			}
+ 			| TK_ID TK_ATRIB OPERACAO
+ 			{
+			 	$$.traducao = $3.traducao+ "\t"+ " " + use_meta_var($1.label, $3.tipo) + " = " + $3.label+ ";\n";
+ 			}
  			| TK_TIPO_INT
  			{
 				$$.tipo = $1.tipo + " ";
