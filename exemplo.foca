@@ -1,5 +1,5 @@
 int main()
 {
-	var a = 3 + 4;
+	var a = 3 + 4 +4;
 
 }

@@ -105,6 +105,10 @@ COMANDO 	: ATRIB
 OPERACAO 	: ARITMETICO
 			| LOGICO
 			| RELACIONAL
+			//| '(' OPERACAO ')'
+			//{
+			//	$$.traducao = $2.traducao;
+			//}
 			;
 
 ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
