@@ -824,27 +824,27 @@ YY_RULE_SETUP
 case 4:
 YY_RULE_SETUP
 #line 27 "lexica.l"
-{yylval.label = "int"; return TK_TIPO_INT; }
+{yylval.tipo = "int"; yylval.tipoReal = "int";  return TK_TIPO_INT; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
 #line 28 "lexica.l"
-{yylval.label = "float"; return TK_TIPO_FLOAT;}
+{yylval.tipo = "float"; yylval.tipoReal = "float";  return TK_TIPO_FLOAT;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 29 "lexica.l"
-{yylval.label = "string"; return TK_TIPO_STRING; }
+{yylval.tipo = "string"; yylval.tipoReal = "string";  return TK_TIPO_STRING; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 30 "lexica.l"
-{yylval.label = "char"; return TK_TIPO_CHAR;}
+{yylval.tipo = "char"; yylval.tipoReal = "char";  return TK_TIPO_CHAR;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 31 "lexica.l"
-{yylval.tipo = "int"; return TK_TIPO_BOOL;}
+{yylval.tipo = "int"; yylval.tipoReal = "bool";  return TK_TIPO_BOOL;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
@@ -944,22 +944,22 @@ YY_RULE_SETUP
 case 28:
 YY_RULE_SETUP
 #line 63 "lexica.l"
-{yylval.traducao = yytext; yylval.tipo = "int"; return TK_NUM; }
+{yylval.traducao = yytext; yylval.tipo = "int"; yylval.tipoReal = "int"; return TK_NUM; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
 #line 64 "lexica.l"
-{yylval.traducao = yytext; yylval.tipo = "float"; return TK_REAL; }
+{yylval.traducao = yytext; yylval.tipo = "float"; yylval.tipoReal = "float"; return TK_REAL; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
 #line 65 "lexica.l"
-{yylval.traducao = yytext; yylval.tipo = "char"; return TK_CHAR; }
+{yylval.traducao = yytext; yylval.tipo = "char"; yylval.tipoReal = "char"; return TK_CHAR; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
 #line 66 "lexica.l"
-{ yylval.tipo = "int"; yylval.traducao = yytext; return TK_BOOL; } 
+{yylval.traducao = yytext; yylval.tipo = "int"; yylval.tipoReal = "bool"; return TK_BOOL; } 
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
