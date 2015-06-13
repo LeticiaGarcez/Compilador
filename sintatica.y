@@ -36,13 +36,18 @@ struct operacao
 
 string geraVar();
 string get_meta_var(string);
-void printDeclaracoes();
 pair<bool, int> isIn(string, vector<meta_variavel>);
 string use_meta_var(string, string);
-pair<bool, int> isIn(string, vector<meta_variavel>);
 void adicionaOperacoes();
 operacao getTipoResultante(string, string, string);
+string nova_meta_var(string, string);
+string nova_temp_meta_var(string);
+string procura_meta_var(string, vector<vector<meta_variavel> >);
 string aritimeticoTraducao(atributos, atributos, atributos, atributos);
+void printDeclaracoes();
+
+void desceEscopo();
+void sobeEscopo();
 
 int yylex(void);
 void yyerror(string);
@@ -87,7 +92,9 @@ S 			: TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 
 BLOCO		: '{' COMANDOS '}'
 			{
+				//desceEscopo();
 				$$.traducao = $2.traducao;
+				//sobeEscopo();
 			}
 			;
 
@@ -99,10 +106,13 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao;
 			}
-			| TK_IF '(' RELACIOL ')' BLOCO
+			| TK_IF '(' RELACIONAL ')' BLOCO
 			{
-				$$.traducao = $3.traducao + "\n" + "if(" +$3.label+ "){ \n" + $5.traducao +"\n}"; 
+				cout << "asda" << endl;
+				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ "){ \n" + $5.traducao +"\n\t}\n"; 
 			}
+			| BLOCO
+			;
 
 COMANDO 	: ATRIB
 			| OPERACAO
@@ -123,7 +133,7 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);
+				$$.label = nova_temp_meta_var( $$.tipo);
 				$$.traducao = aritimeticoTraducao($$, $1, $2, $3);
 				
 			}
@@ -133,7 +143,7 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = aritimeticoTraducao($$, $1, $2, $3);
 			}
 			
@@ -143,7 +153,7 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);
+				$$.label = nova_temp_meta_var( $$.tipo);
 				$$.traducao = aritimeticoTraducao($$, $1, $2, $3);
 			}
 			| ARITMETICO TK_RAZAO ARITMETICO
@@ -152,7 +162,7 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);
+				$$.label = nova_temp_meta_var( $$.tipo);
 				$$.traducao = aritimeticoTraducao($$, $1, $2, $3);
 			}
 			|OP
@@ -166,7 +176,7 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);
+				$$.label = nova_temp_meta_var( $$.tipo);
 				
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
@@ -176,7 +186,7 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);
+				$$.label = nova_temp_meta_var( $$.tipo);
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_IGUAL RELACIONAL
@@ -184,7 +194,7 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_DIFERENTE RELACIONAL
@@ -193,7 +203,7 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 				
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			|OP
@@ -206,7 +216,7 @@ LOGICO		: LOGICO TK_AND LOGICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}	
 			| LOGICO TK_OR LOGICO
@@ -215,7 +225,7 @@ LOGICO		: LOGICO TK_AND LOGICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_OR RELACIONAL
@@ -224,7 +234,7 @@ LOGICO		: LOGICO TK_AND LOGICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			| RELACIONAL TK_AND RELACIONAL
@@ -233,7 +243,7 @@ LOGICO		: LOGICO TK_AND LOGICO
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
 
-				$$.label = use_meta_var("__TEMP__", $$.tipo);	
+				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			|OP
@@ -242,7 +252,7 @@ LOGICO		: LOGICO TK_AND LOGICO
 
 OP			: TK_NUM
 			{
-				$$.label =  use_meta_var("__TEMP__", $1.tipo);
+				$$.label =  nova_temp_meta_var( $1.tipo);
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
 			}
 			| TK_ID
@@ -252,12 +262,12 @@ OP			: TK_NUM
 			}
 			| TK_BOOL
 			{
-				$$.label =  use_meta_var("__TEMP__", $1.tipo);
+				$$.label =  nova_temp_meta_var( $1.tipo);
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
 			}
 			| TK_REAL
 			{
-				$$.label =  use_meta_var("__TEMP__", $1.tipo);
+				$$.label =  nova_temp_meta_var( $1.tipo);
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
 			}
 			;
@@ -265,20 +275,20 @@ OP			: TK_NUM
 
 ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 			{
-				$$.traducao = "\t"+ use_meta_var($2.label, $4.tipo) + " = " + $4.traducao+ ";\n";
+				$$.traducao = "\t"+ nova_meta_var($2.label, $4.tipo) + " = " + $4.traducao+ ";\n";
 			}
 			| TK_VAR TK_ID TK_ATRIB OPERACAO
 			{
-			 	$$.traducao = $4.traducao+ "\t"+ use_meta_var($2.label, $4.tipo) + " = " + $4.label+ ";\n";
+			 	$$.traducao = $4.traducao+ "\t"+ nova_meta_var($2.label, $4.tipo) + " = " + $4.label+ ";\n";
 			}
 			| TK_VAR ATRIB TK_ID TK_ATRIB OPERACAO
 			{
 
-			 	$$.traducao = $5.traducao+ "\t"+ use_meta_var($3.label, $2.tipo) + " = " + "("+$2.tipo+")"+$5.label+ ";\n";
+			 	$$.traducao = $5.traducao+ "\t"+ nova_meta_var($3.label, $2.tipo) + " = " + "("+$2.tipo+")"+$5.label+ ";\n";
 			}
 			| TK_VAR ATRIB TK_ID
 			{
-				$$.traducao = "\t " + use_meta_var($3.label, $2.tipo) +";\n";
+				$$.traducao = "\t " + nova_meta_var($3.label, $2.tipo) +";\n";
  			}
  			| TK_ID TK_ATRIB ATRIB
  			{
@@ -305,8 +315,10 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB ATRIB
 #include "lex.yy.c"
 			
 int temp_counter = 0;
-vector<meta_variavel> list_meta_var;
+//vector<meta_variavel> list_meta_var;
+vector< vector<meta_variavel> > escopo_list;
 vector<operacao> list_op;
+
 
 int yyparse();
 string geraVar();
@@ -314,7 +326,7 @@ string geraVar();
 int main( int argc, char* argv[] )
 {
 	adicionaOperacoes();
-	
+	desceEscopo();
 	yyparse();
 
 	return 0;
@@ -326,6 +338,129 @@ void yyerror( string MSG )
 	exit (0);
 }
 
+void desceEscopo()
+{
+	vector<meta_variavel> list_meta_var;
+	escopo_list.push_back(list_meta_var);
+}
+void sobeEscopo()
+{
+	escopo_list.pop_back();
+}
+
+string nova_temp_meta_var(string tipo) //cria uma nova variavel temporaria
+{
+		meta_variavel nova_meta_var;
+		nova_meta_var.temp_name = geraVar();
+		nova_meta_var.orig_name = "__TEMP__";
+		nova_meta_var.tipo = tipo;
+
+		escopo_list.back().push_back(nova_meta_var);
+		return nova_meta_var.temp_name;
+}
+
+string use_meta_var(string var, string tipo) //Usado no uso de uma variavel ja existente!
+{	
+	vector<vector<meta_variavel> > copia_escopo_list = escopo_list;
+	return procura_meta_var(var, copia_escopo_list);
+}
+
+
+string procura_meta_var(string var, vector<vector<meta_variavel> > copia_escopo_list)
+{
+	cout << "copia" << copia_escopo_list.size() << "orig "<< escopo_list.size() << endl;
+
+	if(copia_escopo_list.empty())
+	{
+		yyerror("Variavel não inicializada");
+	}
+	else
+	{
+		vector<meta_variavel> list_meta_var = copia_escopo_list.back();	
+		copia_escopo_list.pop_back();	
+		pair<bool, int> position = isIn(var, list_meta_var);
+		if(position.first)
+		{
+			return list_meta_var[position.second].temp_name;
+		}
+		else
+		{	
+			return procura_meta_var(var, copia_escopo_list);
+		}
+	}
+}
+
+string nova_meta_var(string var, string tipo)
+{
+	vector<meta_variavel> escopo = escopo_list.back();
+	pair<bool, int> returno = isIn(var, escopo);
+	if(returno.first)
+	{
+		yyerror("Ja existente uma variavel com esse nome");
+	}
+	else
+	{	
+		meta_variavel nova_meta_var;
+		nova_meta_var.temp_name = geraVar();
+		nova_meta_var.orig_name = var;
+		nova_meta_var.tipo = tipo;
+
+		escopo_list.back().push_back(nova_meta_var);
+		return nova_meta_var.temp_name;
+	}
+
+}
+
+
+//Ve se uma variavel esta dentro de um Escopo
+// Retorno: first -> true (se tem ela no escopo); false -> Se não tem
+//			second -> A posição que encontra a variavel
+pair<bool, int> isIn(string var, vector<meta_variavel> L)
+{
+	pair<bool, int> values;
+		int i;
+		for (i = 0; i < L.size(); i++)
+		{
+			if(var == L[i].orig_name)
+			{
+			values.first = true;
+			values.second = i;
+			return values;
+			}
+		}
+	values.first = false;
+	values.second = 0;		
+	return values;
+}
+
+// Varre todas as variaveis e printa a declaração
+void printDeclaracoes(){
+	int i;
+	for (i = escopo_list.size()-1 ; i >= 0; i--)
+	{
+		vector<meta_variavel> list_meta_var = escopo_list[i];
+		int j;
+		for (j = 0; j < list_meta_var.size(); j++)
+		{
+			cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name  << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
+		}		
+	}
+}
+
+/// * Usado para gerar nome de variaveis. Usado na atribuição, e operações * ///
+
+string geraVar()
+{
+	stringstream tempGerator;
+	tempGerator << "_temp_" << temp_counter;
+
+	temp_counter ++;
+	return tempGerator.str();
+}		
+
+//Funções que são usadas na tradução. 
+////Servem para não precisar repetir codigo e juntar todo o teste de tipos no mesmo lugar
+
 string aritimeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $3){
 	
 	stringstream traducao;
@@ -333,7 +468,7 @@ string aritimeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $
 	{
 		traducao << $1.traducao << $3.traducao;
 		
-		string a = use_meta_var("__TEMP__", "float");
+		string a = nova_temp_meta_var( "float");
 		
 		traducao << "\t" << a << " = (float)" << $1.label << ";\n"; 
 		traducao << "\t" << $$.label <<" = " << a << " "<<$2.traducao<<" " << $3.label<< ";\n";
@@ -343,7 +478,7 @@ string aritimeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $
 	{
 		traducao << $1.traducao << $3.traducao;
 		
-		string a = use_meta_var("__TEMP__", "float");
+		string a = nova_temp_meta_var( "float");
 		
 		traducao << "\t" << a << " = (float)" << $3.label << ";\n"; 
 		traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << a<< ";\n";
@@ -355,6 +490,9 @@ string aritimeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $
 	return traducao.str();
 }
 
+
+
+//Funções que manipulam as operações
 void adicionaOperacoes(){
 	operacao op; 
 	//ARITMETICOs
@@ -400,72 +538,3 @@ operacao getTipoResultante(string tipoDireita, string tipoEsquerda, string op){
 	operacaoErrada.tipoReal = " "; 
 	return operacaoErrada;
 }
-
-
-string use_meta_var(string var, string tipo) //Usado na atribuição
-{
-	if (var == "__TEMP__")
-	{
-		meta_variavel nova_meta_var;
-		nova_meta_var.temp_name = geraVar();
-		nova_meta_var.orig_name = "__TEMP__";
-		nova_meta_var.tipo = tipo;
-
-		list_meta_var.push_back(nova_meta_var);
-		return nova_meta_var.temp_name;
-		
-	}
-	pair<bool, int> position = isIn(var, list_meta_var);
-	if(position.first)
-	{
-		return list_meta_var[position.second].temp_name;
-	}
-	else
-	{
-		meta_variavel nova_meta_var;
-		nova_meta_var.temp_name = geraVar();
-		nova_meta_var.orig_name = var;
-		nova_meta_var.tipo = tipo;
-
-		list_meta_var.push_back(nova_meta_var);
-		return nova_meta_var.temp_name;
-	}
-}
-
-pair<bool, int> isIn(string var, vector<meta_variavel> L)
-{
-	pair<bool, int> values;
-		int i;
-		for (i = 0; i < L.size(); i++)
-		{
-			if(var == L[i].orig_name)
-			{
-			values.first = true;
-			values.second = i;
-			return values;
-			}
-		}
-	values.first = false;
-	values.second = 0;		
-	return values;
-}
-
-void printDeclaracoes(){
-	int i;
-	for (i = 0; i < list_meta_var.size(); i++)
-	{
-		cout <<"\t"<< list_meta_var[i].tipo << " " << list_meta_var[i].temp_name  << ";" << "  // "<< list_meta_var[i].orig_name << endl;
-		
-	}
-}
-
-/// * Usado para gerar nome de variaveis. Usado na atribuição, e operações * ///
-
-string geraVar()
-{
-	stringstream tempGerator;
-	tempGerator << "_temp_" << temp_counter;
-
-	temp_counter ++;
-	return tempGerator.str();
-}				
