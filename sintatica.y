@@ -4,11 +4,8 @@
 #include <sstream>
 #include <vector>
 #include <utility>
-
 #define YYSTYPE atributos
-
 using namespace std;
-
 
 struct meta_variavel
 {
@@ -17,7 +14,6 @@ struct meta_variavel
 	string tipo;
 };
 
-
 struct Escopo
 {
 	int nivel;
@@ -25,7 +21,6 @@ struct Escopo
 	string fim;
 	vector<meta_variavel> variaveis;
 };
-
 struct atributos
 {
 	string tipoReal; // Tipo no lule
@@ -33,7 +28,6 @@ struct atributos
 	string label;
 	string traducao;
 };
-
 struct operacao
 {
 	string tipoEsquerda;
@@ -72,8 +66,8 @@ void sobeEscopo();
 
 int yylex(void);
 void yyerror(string);
-
 %}
+
 
 //Operacoes Aritimeticas
 %token TK_MAIS TK_MENOS TK_MULT TK_RAZAO TK_POTENCIA
@@ -87,7 +81,7 @@ void yyerror(string);
 %token TK_TIPO_STRING TK_TIPO_FLOAT TK_TIPO_CHAR TK_TIPO_BOOL TK_TIPO_INT
 //VALORES
 %token TK_NUM TK_VAR TK_REAL TK_CHAR TK_BOOL 
-//Condicionais
+//Condicionais e loops
 %token TK_WHILE TK_FOR TK_SWITCH TK_CASE TK_IF TK_ELSE TK_ELIF
 //Bloco
 %token TK_ABRE TK_FECHA
@@ -99,12 +93,10 @@ void yyerror(string);
 %token TK_FIM TK_ERROR TK_END_E TK_FIMLINHA
 
 %start S
-
 %left '-'
 %left '+'
 %left '*'
 %left '/'
-
 %%
 
 S 			: FUNC TK_MAIN '(' ')' BLOCO
@@ -114,7 +106,6 @@ S 			: FUNC TK_MAIN '(' ')' BLOCO
 				cout <<"\n\n\n"<< $5.traducao << "\treturn 0;\n}" << endl;  
 			}
 			;
-
 FUNC		: TK_FUNC
 			{
 				desceEscopo();
@@ -137,7 +128,6 @@ BLOCO		: ABRE COMANDOS FECHA
 				//FECHA >> sobeEscopo();
 			}
 			;
-
 COMANDOS	: COMANDO ';' COMANDOS
 			{ 
 				$$.traducao = $1.traducao + $3.traducao;		
@@ -224,11 +214,9 @@ FOR 		: TK_FOR
 
 CONDICAO 	: RELACIONAL
 			;
-
 COMANDO 	: ATRIB
 			| OPERACAO
 			;
-
 OPERACAO 	: ARITMETICO
 			| LOGICO
 			| RELACIONAL
@@ -237,7 +225,6 @@ OPERACAO 	: ARITMETICO
 			//	$$.traducao = $2.traducao;
 			//}
 			;
-
 ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 			{
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
@@ -279,8 +266,6 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 			|OP
 			;
 				
-
-
 RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 			{
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
@@ -319,14 +304,11 @@ RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
 			}
 			|OP
 			;
-
-
 LOGICO		: LOGICO TK_AND LOGICO
 			{ 
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-
 				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}	
@@ -335,7 +317,6 @@ LOGICO		: LOGICO TK_AND LOGICO
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-
 				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
@@ -344,7 +325,6 @@ LOGICO		: LOGICO TK_AND LOGICO
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-
 				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
@@ -353,14 +333,11 @@ LOGICO		: LOGICO TK_AND LOGICO
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-
 				$$.label = nova_temp_meta_var( $$.tipo);	
 				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
 			}
 			|OP
 			;
-
-
 OP			: TK_NUM
 			{
 				$$.label =  nova_temp_meta_var( $1.tipo);
@@ -388,7 +365,6 @@ OP			: TK_NUM
 			}
 			;
 
-
 ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO
 			{
 			 	$$.traducao = $4.traducao+ "\t"+ nova_meta_var($2.label, $4.tipo) + " = " + $4.label+ ";\n";
@@ -405,16 +381,11 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO
  			{
 				$$.traducao = $3.traducao+"\t" + use_meta_var($1.label, $3.tipo) + " = " + $3.label+ ";\n";
  			}
- 			| TK_TIPO_INT
-			| TK_TIPO_BOOL
+ 			| TK_TIPO_BOOL
  			| TK_TIPO_FLOAT
  			| TK_TIPO_CHAR
-
-
  
-
 %%
-
 #include "lex.yy.c"
 			
 int temp_counter = 0;
@@ -422,25 +393,19 @@ int label_counter = 0;
 int nivel_escopo = -1;
 vector< vector<Escopo> > escopo_list;
 vector<operacao> list_op;
-
-
 int yyparse();
 string geraVar();
-
 int main( int argc, char* argv[] )
 {
 	adicionaOperacoes();
 	yyparse();
-
 	return 0;
 }
-
 void yyerror( string MSG )
 {
 	cout << MSG << endl;
 	exit (0);
 }
-
 
 ///* Funções que manipulam Escopo *///
 void desceEscopo()
@@ -471,7 +436,6 @@ void sobeEscopo()
 {
 	nivel_escopo--;
 }
-
 
 /// * Funções que manipulam label do escopo */// 
 pair<string,string> geraLabelEscopo()
@@ -563,16 +527,14 @@ string nova_temp_meta_var(string tipo) //cria uma nova variavel temporaria
 		nova_meta_var.temp_name = geraVar();
 		nova_meta_var.orig_name = "__TEMP__";
 		nova_meta_var.tipo = tipo;
-
 		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+
 		return nova_meta_var.temp_name;
 }
-
 string use_meta_var(string var, string tipo) //Usado no uso de uma variavel ja existente!
 {	
 	return procura_meta_var(var, nivel_escopo);
 }
-
 
 string procura_meta_var(string var, int nivel)
 {
@@ -604,7 +566,7 @@ string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-tem
 
 	if(retorno.first)
 	{
-		yyerror("Ja existente uma variavel com esse nome");
+		yyerror("Ja existe uma variavel com esse nome");
 	}
 	else
 	{	
@@ -612,21 +574,14 @@ string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-tem
 		nova_meta_var.temp_name = geraVar();
 		nova_meta_var.orig_name = var;
 		nova_meta_var.tipo = tipo;
-
 		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
 		return nova_meta_var.temp_name;
 	}
-
 }
-
-
-
-
 
 //Funções que são usadas na tradução. 
 ////Servem para não precisar repetir codigo e juntar todo o teste de tipos no mesmo lugar
-string aritmeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $3){
-	
+string aritmeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $3){	
 	stringstream traducao;
 	if(($1.tipo == "int") & ($3.tipo == "float"))
 	{
@@ -648,12 +603,10 @@ string aritmeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $3
 		traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << a<< ";\n";
 		return traducao.str();
 	}
-
 	traducao << $1.traducao << $3.traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << $3.label<< ";\n";
 	
 	return traducao.str();
 }
-
 
 
 ///* Funções que manipulam as operações *///
@@ -680,7 +633,6 @@ void adicionaOperacoes(){
 	//logicos
 	op.tipoDireita = "bool";	op.tipoEsquerda = "bool";	op.tipoResultante = "int"; 		op.tipoReal = "bool";	op.operacao = "logico";
 	list_op.push_back(op);
-
 }
 operacao getTipoResultante(string tipoDireita, string tipoEsquerda, string op){
 	int i;
@@ -695,7 +647,6 @@ operacao getTipoResultante(string tipoDireita, string tipoEsquerda, string op){
 			return list_op[i];
 		}
 	}
-
 	yyerror("operação nao realizavel");
 	operacao operacaoErrada;
 	operacaoErrada.tipoReal = " "; 
