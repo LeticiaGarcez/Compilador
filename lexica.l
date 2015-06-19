@@ -35,6 +35,7 @@ BOOL "true"|"false"
 
 "if"							{return TK_IF; }
 "else" 							{return TK_ELSE; }
+"elif"							{return TK_ELIF; }
 "switch" 						{return TK_SWITCH; }
 "case" 							{return TK_CASE; }
 

@@ -4,12 +4,14 @@ func main()
 	var a = 3;
 	var b = 3;
 
-	if(a==b)
-	{
-		var c = 3;
-	}
-	else
-	{
-		var d = 3;
+	for ( a == b)
+	{	
+		for ( a == b)
+		{
+			if (a == b)
+			{
+				a = a+b;
+			}
+		}
 	}
 }

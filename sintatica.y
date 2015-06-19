@@ -88,7 +88,7 @@ void yyerror(string);
 //VALORES
 %token TK_NUM TK_VAR TK_REAL TK_CHAR TK_BOOL 
 //Condicionais
-%token TK_WHILE TK_FOR TK_SWITCH TK_CASE TK_IF TK_ELSE
+%token TK_WHILE TK_FOR TK_SWITCH TK_CASE TK_IF TK_ELSE TK_ELIF
 //Bloco
 %token TK_ABRE TK_FECHA
 //func
@@ -146,21 +146,54 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao;
 			}
+			| COMANDO_IF COMANDOS
+			{ 
+				$$.traducao = $1.traducao + $2.traducao;		
+			}
+			| COMANDO_FOR COMANDOS
+			{ 
+				$$.traducao = $1.traducao + $2.traducao;		
+			}
 			| COMANDO_IF
 			| COMANDO_FOR
-			| BLOCO
 			;
 
 COMANDO_IF	:IF '(' RELACIONAL ')' BLOCO
 			{
 				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
 			}
-			|COMANDO_IF ELSE BLOCO
-			{
-				$$.traducao = $1.traducao + "\n \t" + "else\n\t{ \n" + $3.traducao +"\n\t}\n"; 
+			|IF '(' RELACIONAL ')' BLOCO ELSE BLOCO
+			{	
+				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
+				$$.traducao += "\telse\n\t{ \n" + $7.traducao +"\n\t}\n"; 
 			}
-			|
+			|IF '(' RELACIONAL ')' BLOCO ELSEIF
+			{
+				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
+				$$.traducao += $6.traducao;
+			}
 			;
+
+ELSEIF		: ELIF '(' RELACIONAL ')' BLOCO
+			{
+				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n\t}\n"; 	
+			}
+			| ELIF '(' RELACIONAL ')' BLOCO ELSEIF
+			{
+				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}"; 	
+				$$.traducao += $6.traducao + "\n\t}\n";
+			}
+			| ELIF '(' RELACIONAL ')' BLOCO ELSE BLOCO
+			{
+				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}"; 	
+				$$.traducao += "\n\telse\n\t{ \n" + $7.traducao +"\n\t}\n \n\t}\n"; 
+			}
+			;
+
+ELIF 		: TK_ELIF
+			{
+				desceEscopo();
+			}
 IF 			: TK_IF
 			{
 				desceEscopo();
@@ -174,15 +207,12 @@ ELSE 		: TK_ELSE
 
 COMANDO_FOR : FOR '(' CONDICAO ')' BLOCO
 			{
-				stringstream traducaoStream; 
-				traducaoStream << $3.traducao; //traducao da condicao
-				traducaoStream << "\n" << getLabelEscopoInicio()<<":"; // label Inicial Do Bloco
-				traducaoStream << "\n\tif (!("<< $3.label <<")) goto " << getLabelEscopoFim() <<";"; //if (condicao) goto labelFinal
-				traducaoStream << "\n" << $5.traducao; //BLOCO
-				traducaoStream << "\n\t goto " << getLabelEscopoInicio()<<";"; //goto LabelInicio
-				traducaoStream << "\n" << getLabelEscopoFim()<<":\n\n"; // Label Final
-
-				$$.traducao = traducaoStream.str();
+				$$.traducao = "\n" + getLabelEscopoInicio()+":\n"; // label Inicial Do Bloco
+				$$.traducao += $3.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $3.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto labelFinal
+				$$.traducao += "\n" + $5.traducao; //BLOCO
+				$$.traducao += "\n\t goto " + getLabelEscopoInicio()+";"; //goto LabelInicio
+				$$.traducao += "\n" + getLabelEscopoFim()+":\n\n"; // Label Final
 			}
 			;
 FOR 		: TK_FOR
@@ -190,6 +220,8 @@ FOR 		: TK_FOR
 				desceEscopo();
 			}
 			;
+
+
 CONDICAO 	: RELACIONAL
 			;
 
@@ -371,7 +403,7 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO
  			}
  			| TK_ID TK_ATRIB OPERACAO
  			{
-				$$.traducao = "\t" + use_meta_var($1.label, $3.tipo) + " = " + $3.traducao+ ";\n";
+				$$.traducao = $3.traducao+"\t" + use_meta_var($1.label, $3.tipo) + " = " + $3.label+ ";\n";
  			}
  			| TK_TIPO_INT
 			| TK_TIPO_BOOL
@@ -388,7 +420,7 @@ ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO
 int temp_counter = 0;
 int label_counter = 0;
 int nivel_escopo = -1;
-vector<Escopo> escopo_list;
+vector< vector<Escopo> > escopo_list;
 vector<operacao> list_op;
 
 
@@ -421,16 +453,58 @@ void desceEscopo()
 	pair<string, string> label = geraLabelEscopo();
 	escopo.inicio = label.first;
 	escopo.fim = label.second;
-	
 	vector<meta_variavel> list_meta_var;	
 	escopo.variaveis = list_meta_var;
 
-	escopo_list.push_back(escopo);
+	if (escopo_list.size() > nivel_escopo)
+	{
+		escopo_list[nivel_escopo].push_back(escopo);
+	}
+	else
+	{
+		vector<Escopo> tempVet;
+		tempVet.push_back(escopo);
+		escopo_list.push_back(tempVet);
+	}
 }
 void sobeEscopo()
 {
 	nivel_escopo--;
 }
+
+
+/// * Funções que manipulam label do escopo */// 
+pair<string,string> geraLabelEscopo()
+{
+	stringstream labelInicialGerator;
+	labelInicialGerator << "_LabelInicio_" << label_counter;
+	
+	stringstream labelFinalGerator;
+	labelFinalGerator << "_LabelFinal_" << label_counter;
+
+	label_counter = label_counter + 1;
+
+	pair<string, string> retorno;
+	retorno.first = labelInicialGerator.str();
+	retorno.second = labelFinalGerator.str();
+
+	return retorno;
+}
+string getLabelEscopoInicio()
+{
+	if(nivel_escopo != escopo_list[nivel_escopo].back().nivel)
+		yyerror("Bug ao compilar");
+
+	return escopo_list[nivel_escopo+1].back().inicio;
+}
+string getLabelEscopoFim()
+{
+	if(nivel_escopo != escopo_list[nivel_escopo].back().nivel)
+		yyerror("Bug ao compilar");
+
+	return escopo_list[nivel_escopo+1].back().fim;
+}
+
 
 //Ve se uma variavel esta dentro de um Escopo
 // Retorno: first -> true (se tem ela no escopo); false -> Se não tem
@@ -459,11 +533,17 @@ void printDeclaracoes(){
 	int i;
 	for (i = escopo_list.size()-1 ; i >= 0; i--)
 	{
-		vector<meta_variavel> list_meta_var = escopo_list[i].variaveis;
-		int j;
-		for (j = 0; j < list_meta_var.size(); j++)
+		vector<Escopo> list_escopos = escopo_list[i];
+		int h;
+		for (h = 0; h < list_escopos.size(); h++)
 		{
-			cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name  << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
+			vector<meta_variavel> list_meta_var = list_escopos[h].variaveis;
+			cout << "// " <<  list_escopos[h].inicio << " " << h << endl;
+			int j;
+			for (j = 0; j < list_meta_var.size(); j++)
+			{
+				cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name  << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
+			}
 		}		
 	}
 }
@@ -474,7 +554,7 @@ string geraVar() //Gera um nome para variavel Temporaria
 	stringstream tempGerator;
 	tempGerator << "_temp_" << temp_counter;
 
-	temp_counter ++;
+	temp_counter++ ;
 	return tempGerator.str();
 }		
 string nova_temp_meta_var(string tipo) //cria uma nova variavel temporaria
@@ -484,7 +564,7 @@ string nova_temp_meta_var(string tipo) //cria uma nova variavel temporaria
 		nova_meta_var.orig_name = "__TEMP__";
 		nova_meta_var.tipo = tipo;
 
-		escopo_list[nivel_escopo].variaveis.push_back(nova_meta_var);
+		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
 		return nova_meta_var.temp_name;
 }
 
@@ -502,7 +582,7 @@ string procura_meta_var(string var, int nivel)
 	}
 	else
 	{
-		vector<meta_variavel> list_meta_var = escopo_list[nivel].variaveis;	
+		vector<meta_variavel> list_meta_var = escopo_list[nivel].back().variaveis;	
 		pair<bool, int> position = isIn(var, list_meta_var);
 		if(position.first)
 		{
@@ -519,7 +599,7 @@ string procura_meta_var(string var, int nivel)
 
 string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-temp)
 {
-	Escopo escopo = escopo_list[nivel_escopo];
+	Escopo escopo = escopo_list[nivel_escopo].back();
 	pair<bool, int> retorno = isIn(var, escopo.variaveis);
 
 	if(retorno.first)
@@ -533,7 +613,7 @@ string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-tem
 		nova_meta_var.orig_name = var;
 		nova_meta_var.tipo = tipo;
 
-		escopo_list[nivel_escopo].variaveis.push_back(nova_meta_var);
+		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
 		return nova_meta_var.temp_name;
 	}
 
@@ -541,38 +621,6 @@ string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-tem
 
 
 
-
-/// * Funções que manipulam label do escopo */// 
-pair<string,string> geraLabelEscopo()
-{
-	stringstream labelInicialGerator;
-	labelInicialGerator << "_LabelInicio_" << label_counter;
-	
-	stringstream labelFinalGerator;
-	labelFinalGerator << "_LabelFinal_" << label_counter;
-
-	temp_counter ++;
-
-	pair<string, string> retorno;
-	retorno.first = labelInicialGerator.str();
-	retorno.second = labelFinalGerator.str();
-
-	return retorno;
-}
-string getLabelEscopoInicio()
-{
-	if(nivel_escopo != escopo_list[nivel_escopo].nivel)
-		yyerror("Bug ao compilar");
-
-	return escopo_list[nivel_escopo].inicio;
-}
-string getLabelEscopoFim()
-{
-	if(nivel_escopo != escopo_list[nivel_escopo].nivel)
-		yyerror("Bug ao compilar");
-
-	return escopo_list[nivel_escopo].fim;
-}
 
 
 //Funções que são usadas na tradução. 
