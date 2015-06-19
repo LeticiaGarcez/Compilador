@@ -13,26 +13,32 @@ LETRA [A-Za-z_]
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
-CHAR \'.\'
+CHAR \'({LETRA}|{NUM})\'
 ID {LETRA}({LETRA}|{NUM})*
 BOOL "true"|"false"
+
 
 
 %%
 
 
 "main"							{return TK_MAIN;}
-"if"							{return TK_IF; }
-"else" 							{return TK_ELSE; }
+
 "int" 							{yylval.tipo = "int"; yylval.tipoReal = "int";  return TK_TIPO_INT; }
 "float" 						{yylval.tipo = "float"; yylval.tipoReal = "float";  return TK_TIPO_FLOAT;}
 "string"						{yylval.tipo = "string"; yylval.tipoReal = "string";  return TK_TIPO_STRING; }
 "char"       					{yylval.tipo = "char"; yylval.tipoReal = "char";  return TK_TIPO_CHAR;}
 "bool"       					{yylval.tipo = "int"; yylval.tipoReal = "bool";  return TK_TIPO_BOOL;}
+
 "while" 						{return TK_WHILE; }
 "for" 							{return TK_FOR; }
+
+"if"							{return TK_IF; }
+"else" 							{return TK_ELSE; }
 "switch" 						{return TK_SWITCH; }
 "case" 							{return TK_CASE; }
+
+"func"							{return TK_FUNC;}
 
 "var"							{return TK_VAR;}
 
@@ -44,6 +50,8 @@ BOOL "true"|"false"
 [-] 							{yylval.traducao = yytext; return TK_MENOS;}
 [*] 							{yylval.traducao = yytext; return TK_MULT;}
 [/] 							{yylval.traducao = yytext; return TK_RAZAO;}
+[{]								{return TK_ABRE; }
+[}]								{return TK_FECHA; }
 
 "=!"							{yylval.traducao = yytext; return TK_DIFERENTE; }
 "=="							{yylval.traducao = yytext; return TK_IGUAL; }

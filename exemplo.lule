@@ -1,5 +1,15 @@
-int main()
+
+func main()
 {
 	var a = 3;
 	var b = 3;
+
+	if(a==b)
+	{
+		var c = 3;
+	}
+	else
+	{
+		var d = 3;
+	}
 }
