@@ -10,13 +10,16 @@ struct meta_variavel
 {
 	string temp_name;
 	string orig_name;
+	int tamanho;
 	string tipo;
+	string tipoReal;
 };
 struct Escopo
 {
 	int nivel;
 	string inicio;
 	string fim;
+	bool isIf;
 	vector<meta_variavel> variaveis;
 };
 struct atributos
@@ -25,6 +28,7 @@ struct atributos
 	string tipo; // Tipo no C
 	string label;
 	string traducao;
+	int tamanho;
 };
 struct operacao
 {
@@ -44,39 +48,66 @@ void printDeclaracoes();
 pair<string,string> geraLabelEscopo();
 string getLabelEscopoInicio();
 string getLabelEscopoFim();
+string getLabelContinue();
+string getLabelBreak();
+string getLabelContinue(int);
+string getLabelBreak(int);
+string getSuperLabelContinue();
+string getSuperLabelBreak();
+string getSuperLabelContinue(int);
+string getSuperLabelBreak(int);
+//manipula labels Condicao
+void criaLabelCondicao();
+string getLabelCondicaoInicio();
+string getLabelCondicaoFim();
+void criaLabelFimCondicoes(); // Cria a label do fim de TODAS as condições
+string getLabelFimCondicoes(); //Pega a label do fim de TODAS as condições
 //manipula variaveis
 string geraVar();
 string nova_temp_meta_var(string);
-string use_meta_var(string, string);
-string procura_meta_var(string, int);
+meta_variavel nova_temp_meta_var_string(int);
+meta_variavel use_meta_var(string, string);
+meta_variavel procura_meta_var(string, int);
 string nova_meta_var(string, string);
+string nova_meta_var_string(string, int);
+string nova_global_meta_var(string, string);
+string nova_global_meta_var_string(string, int); //Cria uma nova variavel (não-temp)
+void resetaString(string, int);
+void procura_e_reseta(string , int, int );
+
 //Traduções
 string aritmeticoTraducao(atributos, atributos, atributos, atributos);
+string relacionalTraducao(atributos, atributos, atributos, atributos);
+string logicoTraducao(atributos, atributos, atributos, atributos);
 //Manipula Escopo
-void desceEscopo();
+void desceEscopo(bool);
 void sobeEscopo();
 int yylex(void);
 void yyerror(string);
 %}
 //Operacoes Aritimeticas
-%token TK_MAIS TK_MENOS TK_MULT TK_RAZAO TK_POTENCIA
+%token TK_MAIS TK_MENOS TK_MULT TK_RAZAO TK_POTENCIA TK_CONCAT
 //Operacoes logica
 %token TK_AND TK_OR
 //Operacores relacionais
 %token TK_MAIOR TK_MENOR TK_DIFERENTE TK_IGUAL
 //ATRIBUICAO
-%token TK_ATRIB
+%token TK_ATRIB TK_VAR TK_GLOBAL
 //TIPOS
 %token TK_TIPO_STRING TK_TIPO_FLOAT TK_TIPO_CHAR TK_TIPO_BOOL TK_TIPO_INT
 //VALORES
-%token TK_NUM TK_VAR TK_REAL TK_CHAR TK_BOOL 
+%token TK_NUM TK_REAL TK_CHAR TK_BOOL TK_STR
 //Condicionais e loops
 %token TK_WHILE TK_FOR TK_SWITCH TK_CASE TK_IF TK_ELSE TK_ELIF
+%token TK_BREAK TK_CONTINUE
 //Bloco
 %token TK_ABRE TK_FECHA
-//func
-%token TK_FUNC
-//
+//func + do
+%token TK_FUNC TK_DO
+//read write
+%token TK_READ TK_WRITE 
+
+%token TK_SUPER
 %token TK_MAIN TK_ID 
 %token TK_FIM TK_ERROR TK_END_E TK_FIMLINHA
 %start S
@@ -87,30 +118,46 @@ void yyerror(string);
 %%
 S 			: FUNC TK_MAIN '(' ')' BLOCO
 			{
-				cout << "/*Compilador FOCA*/\n" << "#include <iostream> \n#include <string.h> \n#include <stdio.h>\n#define true 1 \n#define false 0 \nint main(void)\n{\n" << endl;
+				cout << "/*Compilador FOCA*/\n" << "#include <iostream> \n#include <string.h> \n#include <stdio.h>\nusing namespace std;\n#define true 1 \n#define false 0 \nint main(void)\n{\n" << endl;
 				printDeclaracoes();
 				cout <<"\n\n\n"<< $5.traducao << "\treturn 0;\n}" << endl;  
 			}
 			;
 FUNC		: TK_FUNC
 			{
-				desceEscopo();
+				desceEscopo(false);
 			}
 			;
-ABRE 		: TK_ABRE
+
+BLOCO		: TK_ABRE COMANDOS FECHA
+			{
+				$$.traducao = $2.traducao;
+			}
 			;
+BLOCO_EXP	: ABRE COMANDOS FECHA
+			{
+				$$.traducao = $2.traducao;
+			}
+			;
+
+BLOCO_ALTER: TK_ABRE COMANDOS TK_FECHA
+			{
+				$$.traducao = $2.traducao;
+			}
+			;
+
+ABRE 		: TK_ABRE
+			{
+				desceEscopo(false);	
+			}
+			;
+
 FECHA 		: TK_FECHA
 			{
 				sobeEscopo();	
 			}
 			;
-BLOCO		: ABRE COMANDOS FECHA
-			{
-				//ABRE >> desceEscopo();
-				$$.traducao = $2.traducao;
-				//FECHA >> sobeEscopo();
-			}
-			;
+VOLTA_ESCOPO : {sobeEscopo();}
 COMANDOS	: COMANDO ';' COMANDOS
 			{ 
 				$$.traducao = $1.traducao + $3.traducao;		
@@ -119,63 +166,104 @@ COMANDOS	: COMANDO ';' COMANDOS
 			{
 				$$.traducao = $1.traducao;
 			}
-			| COMANDO_IF COMANDOS
+			| BLOCO_EXP
+			| CONDICIONAIS COMANDOS
 			{ 
 				$$.traducao = $1.traducao + $2.traducao;		
 			}
-			| COMANDO_FOR COMANDOS
-			{ 
-				$$.traducao = $1.traducao + $2.traducao;		
+			| COMANDO_LOOPS COMANDOS
+			{
+				$$.traducao = $1.traducao + $2.traducao;	
 			}
-			| COMANDO_IF
+			| CONDICIONAIS
+			| COMANDO_LOOPS
+			;
+
+CONDICIONAIS : CMD_ELIF //if com elseifs
+			 {
+				$$.traducao = $1.traducao + "\n" + getLabelFimCondicoes()+":\n\n"; // Label Final
+			 }
+			 | CMD_ELSE //if com elseifs e else ou if sem elsif com else
+			 {
+				$$.traducao = $1.traducao + "\n" + getLabelFimCondicoes()+":\n\n"; // Label Final
+			 }
+			 | COMANDO_IF //if PURO sem else e sem elseifs
+			 ;
+// Condicionais e Traduções 
+COMANDO_IF	: IF '(' CONDICAO ')' BLOCO //if PURO sem else e sem elseifs
+			{
+				$$.traducao = $3.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $3.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto labelFinal
+				$$.traducao += "\n" + $5.traducao +"\n";
+				$$.traducao += "\n" + getLabelEscopoFim()+":"; // Label Final
+			}
+			;
+//Exatamente igual ao CMD_IF, mas não tem a LABEL para o fim de TODAS as condições
+CMD_IF_ALTER : IF '(' CONDICAO ')' BLOCO //if para ter ELIFs ou ELSEs ( Esse if tem um goto para o final de TODOS elifs/elses)
+			{
+				$$.traducao = $3.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $3.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto labelFinal
+				$$.traducao += "\n" + $5.traducao +"\n";
+				$$.traducao += "\n\t goto " + getLabelFimCondicoes() +";\n";
+				$$.traducao += "\n" + getLabelEscopoFim()+":\n"; // Label Final
+			}
+			;
+
+CMD_ELIF	: CMD_IF_ALTER CMD_ELIF_ALTER //if com elseifs
+			{
+				$$.traducao = $1.traducao + $2.traducao; //IF + quantos ELIFs tiverem	
+			}
+			;
+
+CMD_ELIF_ALTER : CMD_ELIF_ALTER CMD_ELIF_ALTER
+			{
+				$$.traducao = $1.traducao + $2.traducao; // Quantos elifs tiverem
+			}
+			| ELIF '(' CONDICAO ')' BLOCO// tradução do ELIF
+			{
+				$$.traducao = $3.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $3.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto labelFinal
+				$$.traducao += "\n" + $5.traducao +"\n"; // Bloco
+				$$.traducao += "\n\t goto " + getLabelFimCondicoes() +";\n"; //Go para o final de TODAS as condições
+				$$.traducao += "\n" + getLabelEscopoFim()+":\n\n"; // Label Final
+			} 
+			;
+
+CMD_ELSE	: CMD_IF_ALTER ELSE BLOCO // ELSE depois de ELIFs
+			{
+				$$.traducao = $1.traducao; // IF
+				$$.traducao += "\n" + $3.traducao +"\n"; // Bloco do ELSE
+			}
+			| CMD_IF_ALTER CMD_ELIF_ALTER ELSE BLOCO // ELSE depois de IF
+			{
+				$$.traducao = $1.traducao + $2.traducao; //IF + Quantos ELIFs tiverem
+				$$.traducao += "\n" + $4.traducao +"\n"; // Bloco do ELSE
+			}
+			;
+
+ELIF 		: TK_ELIF {	desceEscopo(true); };
+
+IF 			: TK_IF { desceEscopo(true); criaLabelFimCondicoes();	};
+
+ELSE 		: TK_ELSE {	desceEscopo(true); };
+
+// Loops e Traduções
+COMANDO_LOOPS:
 			| COMANDO_FOR
 			| COMANDO_WHILE
+			| COMANDO_DOWHILE
 			;
-COMANDO_IF	:IF '(' RELACIONAL ')' BLOCO
-			{
-				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
-			}
-			|IF '(' RELACIONAL ')' BLOCO ELSE BLOCO
-			{	
-				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
-				$$.traducao += "\telse\n\t{ \n" + $7.traducao +"\n\t}\n"; 
-			}
-			|IF '(' RELACIONAL ')' BLOCO ELSEIF
-			{
-				$$.traducao = $3.traducao + "\n \t" + "if(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n"; 
-				$$.traducao += $6.traducao;
-			}
-			;
-ELSEIF		: ELIF '(' RELACIONAL ')' BLOCO
-			{
-				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}\n\t}\n"; 	
-			}
-			| ELIF '(' RELACIONAL ')' BLOCO ELSEIF
-			{
-				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}"; 	
-				$$.traducao += $6.traducao + "\n\t}\n";
-			}
-			| ELIF '(' RELACIONAL ')' BLOCO ELSE BLOCO
-			{
-				$$.traducao =  "\n \telse{ \n" + $3.traducao + "\n\tif(" +$3.label+ ")\n\t{ \n" + $5.traducao +"\n\t}"; 	
-				$$.traducao += "\n\telse\n\t{ \n" + $7.traducao +"\n\t}\n \n\t}\n"; 
-			}
-			;
-ELIF 		: TK_ELIF
-			{
-				desceEscopo();
-			}
-IF 			: TK_IF
-			{
-				desceEscopo();
-			}
-			;
-ELSE 		: TK_ELSE
-			{
-				desceEscopo();
-			}
-			;
+
 COMANDO_FOR : FOR '(' CONDICAO ')' BLOCO
+			{
+				$$.traducao = "\n" + getLabelEscopoInicio()+":\n"; // label Inicial Do Bloco
+				$$.traducao += $3.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $3.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto labelFinal
+				$$.traducao += "\n" + $5.traducao; //BLOCO
+				$$.traducao += "\n\t goto " + getLabelEscopoInicio()+";"; //goto LabelInicio
+				$$.traducao += "\n" + getLabelEscopoFim()+":\n\n"; // Label Final
+			}
+			|FOR '(' CONDICAO ')' COMANDO ';' VOLTA_ESCOPO
 			{
 				$$.traducao = "\n" + getLabelEscopoInicio()+":\n"; // label Inicial Do Bloco
 				$$.traducao += $3.traducao; //traducao da condicao
@@ -195,11 +283,24 @@ COMANDO_FOR : FOR '(' CONDICAO ')' BLOCO
 				$$.traducao += "\n\t goto " + getLabelEscopoInicio()+";"; //goto Label Inicio
 				$$.traducao += "\n" + getLabelEscopoFim()+":\n\n"; // Label Final
 			}
+			| FOR '(' ATRIB ';' CONDICAO ';' ATRIB ')' COMANDO ';' VOLTA_ESCOPO
+			{
+				$$.traducao = $3.traducao; //traducao do ponto de partida
+				$$.traducao += "\n" + getLabelEscopoInicio()+":\n"; // Label Inicial Do Bloco
+				$$.traducao += $5.traducao; //traducao da condicao
+				$$.traducao += "\n\tif (!("+ $5.label +")) goto " + getLabelEscopoFim() +";"; //if (condicao) goto Label Final
+				$$.traducao += "\n" + $9.traducao; //BLOCO
+				$$.traducao += "\n" + $7.traducao; //incremento ou decremento
+				$$.traducao += "\n\t goto " + getLabelEscopoInicio()+";"; //goto Label Inicio
+				$$.traducao += "\n" + getLabelEscopoFim()+":\n\n"; // Label Final
+			}
 			;
+
 FOR 		: TK_FOR
 			{
-				desceEscopo();
+				desceEscopo(false);
 			}
+			;
 
 COMANDO_WHILE : WHILE '(' CONDICAO ')' BLOCO
 				{
@@ -214,23 +315,75 @@ COMANDO_WHILE : WHILE '(' CONDICAO ')' BLOCO
 
 WHILE		: TK_WHILE
 			{
-				desceEscopo();
+				desceEscopo(false);
 			}
 			;
-CONDICAO 	: RELACIONAL
+
+
+/* Bloco do Dowhile é especial pois nao pode subir o escopo antes da condição*/
+COMANDO_DOWHILE : DO BLOCO_ALTER TK_WHILE '(' CONDICAO ')' FIM_DOWHILE
+			{
+				$$.traducao = "\n" + getLabelEscopoInicio()+":\n"; // label Inicial Do Bloco
+				$$.traducao += "\n" + $2.traducao; //BLOCO
+				$$.traducao +=  "\n" + $5.traducao; //traducao da condicao
+				$$.traducao += "\n\tif ("+ $5.label +") goto " + getLabelEscopoInicio() +";\n"; //if (condicao) goto labelFinal
+			}
 			;
+
+DO 			: TK_DO
+			{
+				desceEscopo(false);
+			}
+			;
+FIM_DOWHILE : ';'
+			{
+				sobeEscopo();
+			}
+
+CONDICAO 	: RELACIONAL
+			| LOGICO
+			;
+
+BREAK 		: TK_BREAK
+			{
+				$$.traducao = "\tgoto " + getLabelBreak()+";\n";
+			}
+			;
+
+CONTINUE	: TK_CONTINUE
+			{
+				$$.traducao = "\tgoto " + getLabelContinue()+";\n";
+			}
+			;
+SUPERBREAK 		: TK_SUPER TK_BREAK
+			{
+				$$.traducao = "\tgoto " + getSuperLabelBreak()+";\n";
+			}
+			;
+
+SUPERCONTINUE	: TK_SUPER TK_CONTINUE
+			{
+				$$.traducao = "\tgoto " + getSuperLabelContinue()+";\n";
+			}
+			;
+
 COMANDO 	: ATRIB
 			| OPERACAO
+			| BREAK
+			| CONTINUE
+			| SUPERBREAK
+			| SUPERCONTINUE
+			| DECLARA
+			| CMD_COUT
+			| CMD_CIN
 			;
 OPERACAO 	: ARITMETICO
 			| LOGICO
 			| RELACIONAL
-			//| '(' OPERACAO ')'
-			//{
-			//	$$.traducao = $2.traducao;
-			//}
+			| CONCATENACAO
 			;
-ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
+
+ARITMETICO	: ARITMETICO OP_ARITMETICO ARITMETICO
 			{
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
 				$$.tipo = op.tipoResultante;
@@ -239,118 +392,112 @@ ARITMETICO	: ARITMETICO TK_MAIS ARITMETICO
 				$$.label = nova_temp_meta_var( $$.tipo);
 				$$.traducao = aritmeticoTraducao($$, $1, $2, $3);
 				
-			}
-			| ARITMETICO TK_MENOR ARITMETICO
-			{
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = aritmeticoTraducao($$, $1, $2, $3);
-			}
-			
-			| ARITMETICO TK_MULT ARITMETICO
-			{	
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);
-				$$.traducao = aritmeticoTraducao($$, $1, $2, $3);
-			}
-			| ARITMETICO TK_RAZAO ARITMETICO
-			{
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "ARITMETICO");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);
-				$$.traducao = aritmeticoTraducao($$, $1, $2, $3);
 			}
 			|OP
 			;
-				
-RELACIONAL	: RELACIONAL TK_MAIOR RELACIONAL
+
+OP_ARITMETICO: TK_RAZAO | TK_MAIS | TK_MENOS | TK_MULT ;
+
+CONCATENACAO: CONCATENACAO TK_CONCAT CONCATENACAO
 			{
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);
-				
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
-			}
-			| RELACIONAL TK_MENOR RELACIONAL	
-			{
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
-			}
-			| RELACIONAL TK_IGUAL RELACIONAL
-			{
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
-			}
-			| RELACIONAL TK_DIFERENTE RELACIONAL
-			{ 
-				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
-				$$.tipo = op.tipoResultante;
-				$$.tipoReal = op.tipoReal;
-				
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.tipo = "char[]";
+				$$.tipoReal = "string";
+				meta_variavel var = nova_temp_meta_var_string( $1.tamanho + $3.tamanho); 
+				$$.label = var.temp_name; 
+				$$.tamanho = $1.tamanho + $3.tamanho;
+				if($1.tipoReal == "string" & $3.tipoReal == "string")
+					$$.traducao = $1.traducao + $3.traducao +"\n\t strcat("+$$.label+","+$1.label+");\n\t strcat("+$$.label+","+$3.label+");\n"; 
+				else
+					yyerror("Não, Braida, ainda não fiz isso");
+				//$$.label = nova_meta_var_string()
 			}
 			|OP
 			;
-LOGICO		: LOGICO TK_AND LOGICO
+
+
+RELACIONAL	: RELACIONAL OP_RELACIONAL RELACIONAL
+			{
+				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "relacional");
+
+				$$.tipo = op.tipoResultante;
+				$$.tipoReal = op.tipoReal;				
+				$$.label = nova_temp_meta_var( $$.tipo);
+				
+				$$.traducao = relacionalTraducao($$, $1, $2, $3);
+			}
+			|OP
+			;
+
+OP_RELACIONAL : TK_DIFERENTE | TK_IGUAL | TK_MENOR | TK_MAIOR ;
+
+LOGICO		: LOGICO OP_LOGICO LOGICO
 			{ 
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.label = nova_temp_meta_var( $$.tipo);
+
+				$$.traducao = logicoTraducao($$, $1, $2, $3);
 			}	
-			| LOGICO TK_OR LOGICO
+			| RELACIONAL OP_LOGICO RELACIONAL
 			{ 
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
-			}
-			| RELACIONAL TK_OR RELACIONAL
+				$$.label = nova_temp_meta_var( $$.tipo);
+
+				$$.traducao = logicoTraducao($$, $1, $2, $3);
+			}	
+			| LOGICO OP_LOGICO RELACIONAL
 			{ 
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
-			}
-			| RELACIONAL TK_AND RELACIONAL
+				$$.label = nova_temp_meta_var( $$.tipo);
+
+				$$.traducao = logicoTraducao($$, $1, $2, $3);
+			}	
+			| RELACIONAL OP_LOGICO LOGICO
 			{ 
 				operacao op = getTipoResultante($1.tipoReal, $3.tipoReal, "logico");
+
 				$$.tipo = op.tipoResultante;
 				$$.tipoReal = op.tipoReal;
-				$$.label = nova_temp_meta_var( $$.tipo);	
-				$$.traducao = $1.traducao + $3.traducao + "\t"+ $$.label +" = " + $1.label + " " + $2.traducao + " " + $3.label+ ";\n";
+				$$.label = nova_temp_meta_var( $$.tipo);
+
+				$$.traducao = logicoTraducao($$, $1, $2, $3);
 			}
 			|OP
 			;
+
+OP_LOGICO	: TK_AND | TK_OR ;
+
+
 OP			: TK_NUM
 			{
 				$$.label =  nova_temp_meta_var( $1.tipo);
-				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
+				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";	
+				$$.tamanho = $$.traducao.size();		
+			}
+			| TK_STR
+			{
+				meta_variavel temp;
+				temp =  nova_temp_meta_var_string($1.traducao.size()-2);
+				$$.label = temp.temp_name;
+				$$.tipo = temp.tipo;
+				$$.tamanho = temp.tamanho;
+				$$.traducao = "\t strcpy(" + $$.label + "," + $1.traducao + ");\n";				
 			}
 			| TK_ID
-			{
-				$$.label =  use_meta_var($$.label, " ");
+			{	
+				meta_variavel var = use_meta_var($$.label, " ");
+				$$.label =  var.temp_name;
+				$$.tamanho = var.tamanho;
+				$$.tipo = var.tipo;
+				$$.tipoReal = var.tipoReal;
 				$$.traducao = "";
 			}
 			| TK_BOOL
@@ -360,49 +507,181 @@ OP			: TK_NUM
 			}
 			| TK_REAL
 			{
+				$$.tamanho = $$.traducao.size();
 				$$.label =  nova_temp_meta_var( $1.tipo);
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
 			}
 			| TK_CHAR
 			{
+				$$.tamanho = $$.traducao.size()-2;
 				$$.label =  nova_temp_meta_var( $1.tipo);
 				$$.traducao = "\t" + $$.label + " = " + $1.traducao + ";\n";			
 			}
 			;
-ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO
+
+DECLARA 	: TK_VAR TIPO TK_ID // var int a
 			{
-			 	$$.traducao = $4.traducao+ "\t"+ nova_meta_var($2.label, $4.tipo) + " = " + $4.label+ ";\n";
+				if($2.tipoReal == "string"){
+					$$.label = nova_meta_var_string($3.label, 0);
+					$$.traducao = " ";
+					$$.tipoReal = $2.tipoReal;
+					$$.tipo = $2.tipo;
+				}else
+				{
+	 				$$.traducao = " ";
+	 				$$.label = nova_meta_var($3.label, $2.tipo);
+	 			}
+ 			}
+			| TK_GLOBAL TK_VAR TIPO TK_ID // global var int a;
+			{
+				$$.traducao = " ";
+				$$.label = nova_global_meta_var($4.label, $3.tipo);
+ 			}
+ 			;
+
+ATRIB 		: TK_VAR TK_ID TK_ATRIB OPERACAO // var a = 4
+			{
+				if($4.tipoReal == "string"){
+			 		//faço uma parada especial
+			 		$$.traducao = $4.traducao+ "\t strcpy("+ nova_meta_var_string($2.label, $4.tamanho) + ", " +$4.label+ ");\n";
+			 	}else
+			 	{
+			 		$$.traducao = $4.traducao+ "\t"+ nova_meta_var($2.label, $4.tipo) + " = " + $4.label+ ";\n";
+			 	}
 			}
-			| TK_VAR ATRIB TK_ID TK_ATRIB OPERACAO
+			| TK_VAR TIPO TK_ID TK_ATRIB OPERACAO // var int a = 4
 			{
-			 	$$.traducao = $5.traducao+ "\t"+ nova_meta_var($3.label, $2.tipo) + " = " + "("+$2.tipo+")"+$5.label+ ";\n";
+
+				if($2.tipoReal == "string" && $5.tipoReal == "string")
+				{
+					$$.traducao = $5.traducao+ "\t strcpy("+ nova_meta_var_string($3.label, $5.tamanho) + ", " +$5.label+ ");\n";	
+				}
+				else if( ($2.tipoReal == "string" && $5.tipoReal != "string")||($2.tipoReal != "string" && $5.tipoReal == "string"))
+				{
+					yyerror("Não é possivel fazer essa atribuição");
+				}
+				else
+				{
+			 		$$.traducao = $5.traducao+ "\t"+ nova_meta_var($3.label, $2.tipo) + " = " + "("+$2.tipo+")"+$5.label+ ";\n";
+				}
 			}
-			| TK_VAR ATRIB TK_ID
+			//Globais
+ 			| TK_GLOBAL TK_VAR TK_ID TK_ATRIB OPERACAO //global var a = 4
 			{
-				$$.traducao = "\t " + nova_meta_var($3.label, $2.tipo) +";\n";
- 			}
- 			| TK_ID TK_ATRIB OPERACAO
+			 	
+				if($5.tipoReal == "string")
+				{
+					$$.traducao = $5.traducao+ "\t strcpy("+ nova_global_meta_var_string($3.label, $5.tamanho) + ", " +$5.label+ ");\n";	
+				}
+				else
+				{
+			 		$$.traducao = $5.traducao+ "\t"+ nova_global_meta_var($3.label, $5.tipo) + " = " + $5.label+ ";\n";
+				}
+			 }
+			| TK_GLOBAL TK_VAR TIPO TK_ID TK_ATRIB OPERACAO //global var int a = 4
+			{
+				if($3.tipoReal == "string" && $6.tipoReal == "string")
+				{
+					$$.traducao = $6.traducao+ "\t strcpy("+ nova_global_meta_var_string($4.label, $6.tamanho) + ", " +$6.label+ ");\n";	
+				}
+				else if( ($3.tipoReal == "string" && $6.tipoReal != "string")||($3.tipoReal != "string" && $6.tipoReal == "string"))
+				{
+					yyerror("Não é possivel fazer essa atribuição");
+				}
+				else
+				{
+			 		$$.traducao = $6.traducao+ "\t"+ nova_global_meta_var($4.label, $3.tipo) + " = " + "("+$3.tipo+")"+$6.label+ ";\n";
+				}
+			 }
+ 			| TK_ID TK_ATRIB OPERACAO // a = 4;
  			{
-				$$.traducao = $3.traducao+"\t" + use_meta_var($1.label, $3.tipo) + " = " + $3.label+ ";\n";
+ 				if($3.tipoReal == "string"){
+ 					resetaString($1.label, $3.tamanho);
+ 					meta_variavel var = use_meta_var($1.label, $3.tipo);				
+ 					$$.traducao = $3.traducao+"\t strcpy(" + var.temp_name + "," + $3.label+ ");\n";
+ 				}else{
+ 					meta_variavel var = use_meta_var($1.label, $3.tipo);
+ 					$$.traducao = $3.traducao+"\t" + var.temp_name + " = " + $3.label+ ";\n";
+ 				}
+
  			}
- 			| TK_ID TK_MAIS
+ 			| TK_ID TK_MAIS TK_MAIS // a++
  			{
- 				$$.traducao = "\t" + use_meta_var($1.label, $1.tipo) + " = " + use_meta_var($1.label, $1.tipo) + "+ 1;\n";
+ 				 meta_variavel var = use_meta_var($1.label, $1.tipo);
+ 				$$.traducao = "\t" + var.temp_name + " = " + var.temp_name + "+ 1;\n";
  			}
- 			| TK_ID TK_MENOS
+ 			| TK_ID TK_MENOS TK_MENOS // a--
  			{
- 				$$.traducao = "\t" + use_meta_var($1.label, $1.tipo) + " = " + use_meta_var($1.label, $1.tipo) + "- 1;\n";
+ 				meta_variavel var = use_meta_var($1.label, $1.tipo);
+ 				$$.traducao = "\t" + var.temp_name + " = " + var.temp_name + "- 1;\n";
  			}
- 			| TK_TIPO_BOOL
+ 			;	
+
+TIPO 		: TK_TIPO_BOOL
  			| TK_TIPO_FLOAT
  			| TK_TIPO_CHAR
- 
+ 			| TK_TIPO_INT
+ 			| TK_TIPO_STRING
+ 			;
+
+CMD_CIN 	:  TK_VAR TIPO TK_ID TK_ATRIB TK_READ 
+			{
+
+				if($2.tipoReal == "string"){
+					nova_meta_var_string($3.label, 0);
+ 					resetaString($3.label, 1024);
+ 					meta_variavel var = use_meta_var($3.label, $3.tipo);
+					$$.traducao = "\t cin << " + var.temp_name + " ;\n";	
+				}else
+				{
+	 				$$.label = nova_meta_var($3.label, $2.tipo);
+					$$.traducao = "\t cin << " + $$.label + " ;\n";
+				}
+			}
+			| TK_GLOBAL TK_VAR TIPO TK_ID TK_ATRIB TK_READ// global var int a;
+			{
+				if($3.tipoReal == "string"){
+					nova_meta_var_string($4.label, 0);
+ 					resetaString($4.label, 1024);
+ 					meta_variavel var = use_meta_var($4.label, $4.tipo);
+					$$.traducao = "\tcin << " + var.temp_name + " ;\n";	
+				}else
+				{
+	 				$$.label = nova_meta_var($4.label, $3.tipo);
+					$$.traducao = "\tcin << " + $$.label + " ;\n";
+				}
+ 			}
+			| TK_READ '('TK_ID')'
+			{
+				if($3.tipoReal == "string"){
+ 					resetaString($3.label, 1024);
+ 					meta_variavel var = use_meta_var($3.label, $3.tipo);
+					$$.traducao = "\t cin << " + var.temp_name + " ;\n";	
+				}
+				else{
+					$$.traducao = "\t cin << " + $3.label + " ;\n";	
+				}
+			}
+			;
+
+CMD_COUT 	: TK_WRITE '(' OPERACAO ')'
+			{	
+				$$.traducao = $3.traducao;
+				$$.traducao += "\t cout <<" + $3.label + " ;\n";
+			}
+			;
+
 %%
 #include "lex.yy.c"
 			
 int temp_counter = 0;
 int label_counter = 0;
 int nivel_escopo = -1;
+int label_fim_condicoes_counter = 0;
+int condicao_counter = 0;
+
+string condicaoLabel;
+string label_fim_condicoes;
 vector< vector<Escopo> > escopo_list;
 vector<operacao> list_op;
 int yyparse();
@@ -419,7 +698,7 @@ void yyerror( string MSG )
 	exit (0);
 }
 ///* Funções que manipulam Escopo *///
-void desceEscopo()
+void desceEscopo(bool isIf)
 {	
 	nivel_escopo++;
 	Escopo escopo;
@@ -427,6 +706,7 @@ void desceEscopo()
 	pair<string, string> label = geraLabelEscopo();
 	escopo.inicio = label.first;
 	escopo.fim = label.second;
+	escopo.isIf = isIf;
 	vector<meta_variavel> list_meta_var;	
 	escopo.variaveis = list_meta_var;
 	if (escopo_list.size() > nivel_escopo)
@@ -458,6 +738,36 @@ pair<string,string> geraLabelEscopo()
 	retorno.second = labelFinalGerator.str();
 	return retorno;
 }
+
+
+void criaLabelFimCondicoes()
+{
+	stringstream labelFimCondicoesGerator;
+	labelFimCondicoesGerator << "_label_fim_condicoes_" << label_fim_condicoes_counter;
+	label_fim_condicoes_counter++ ;
+	label_fim_condicoes = labelFimCondicoesGerator.str();
+}
+
+
+string getLabelFimCondicoes()
+{
+	return label_fim_condicoes;
+}
+
+// void criaLabelCondicao()
+// {
+// 	stringstream labelFinalGerator;
+// 	labelFinalGerator << "_LabelCondicao_" << condicao_counter;
+// 	condicao_counter++;
+
+// 	condicaoLabel = labelFinalGerator.str(); 
+
+// }
+// string getLabelCondicaoFim()
+// {
+// 	return condicaoLabel;
+// }
+
 string getLabelEscopoInicio()
 {
 	if(nivel_escopo != escopo_list[nivel_escopo].back().nivel)
@@ -470,6 +780,75 @@ string getLabelEscopoFim()
 		yyerror("Bug ao compilar");
 	return escopo_list[nivel_escopo+1].back().fim;
 }
+string getLabelContinue()
+{
+	if(nivel_escopo != escopo_list[nivel_escopo].back().nivel)
+		yyerror("Bug ao compilar");
+	if(escopo_list[nivel_escopo].back().isIf == false)
+		return escopo_list[nivel_escopo].back().inicio;
+	else
+		return getLabelContinue(nivel_escopo);
+}
+string getLabelContinue(int nivel)
+{
+	if(escopo_list[nivel].back().isIf == false)
+		return escopo_list[nivel].back().inicio;
+	else{
+		nivel--;
+		return getLabelContinue(nivel);
+	}
+}
+string getLabelBreak()
+{
+	if(nivel_escopo != escopo_list[nivel_escopo].back().nivel)
+		yyerror("Bug ao compilar");
+	if(escopo_list[nivel_escopo].back().isIf == false)
+		return escopo_list[nivel_escopo].back().fim;
+	else
+		return getLabelBreak(nivel_escopo);
+}
+string getLabelBreak(int nivel)
+{
+	if(escopo_list[nivel].back().isIf == false)
+		return escopo_list[nivel].back().fim;
+	else{		
+		nivel--;
+		return getLabelBreak(nivel);
+	}
+}
+string getSuperLabelContinue()
+{
+	if(escopo_list[1].back().isIf == false)
+		return escopo_list[1].back().inicio;
+	else
+		return getSuperLabelContinue(1);
+}
+string getSuperLabelContinue(int nivel)
+{
+	if(escopo_list[nivel].back().isIf == false)
+		return escopo_list[nivel].back().inicio;
+	else{
+		nivel++;
+		return getSuperLabelContinue(nivel);
+	}
+}
+string getSuperLabelBreak()
+{
+	if(escopo_list[1].back().isIf == false)
+		return escopo_list[1].back().fim;
+	else
+		return getSuperLabelBreak(1);
+}
+string getSuperLabelBreak(int nivel)
+{
+	if(escopo_list[nivel].back().isIf == false)
+		return escopo_list[nivel].back().fim;
+	else{		
+		nivel++;
+		return getSuperLabelBreak(nivel);
+	}
+}
+
 //Ve se uma variavel esta dentro de um Escopo
 // Retorno: first -> true (se tem ela no escopo); false -> Se não tem
 //			second -> A posição que encontra a variavel
@@ -504,7 +883,10 @@ void printDeclaracoes(){
 			int j;
 			for (j = 0; j < list_meta_var.size(); j++)
 			{
-				cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name  << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
+				if(list_meta_var[j].tipo == "char" & list_meta_var[j].tamanho > 0)
+					cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name<<'['<< list_meta_var[j].tamanho<<']' << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
+				else
+					cout <<"\t"<< list_meta_var[j].tipo << " " << list_meta_var[j].temp_name  << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_meta_var[j].orig_name << endl;
 			}
 		}		
 	}
@@ -526,11 +908,24 @@ string nova_temp_meta_var(string tipo) //cria uma nova variavel temporaria
 		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
 		return nova_meta_var.temp_name;
 }
-string use_meta_var(string var, string tipo) //Usado no uso de uma variavel ja existente!
-{	
-	return procura_meta_var(var, nivel_escopo);
+meta_variavel nova_temp_meta_var_string(int tamanho) //cria uma nova variavel temporaria string
+{
+		meta_variavel nova_meta_var;
+		nova_meta_var.temp_name = geraVar();
+		nova_meta_var.orig_name = "__TEMP__";
+		nova_meta_var.tipo = "char";
+		nova_meta_var.tamanho = tamanho;
+
+		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+		return nova_meta_var;
 }
-string procura_meta_var(string var, int nivel)
+
+meta_variavel use_meta_var(string var, string tipo) //Usado no uso de uma variavel ja existente!
+{	
+	 
+	return  procura_meta_var(var, nivel_escopo);
+}
+meta_variavel procura_meta_var(string var, int nivel)
 {
 	if(nivel == -1)
 	{
@@ -542,12 +937,39 @@ string procura_meta_var(string var, int nivel)
 		pair<bool, int> position = isIn(var, list_meta_var);
 		if(position.first)
 		{
-			return list_meta_var[position.second].temp_name;
+			return list_meta_var[position.second];
 		}
 		else
 		{	
 			nivel--;
 			return procura_meta_var(var,nivel );
+		}
+	}
+}
+void resetaString(string var, int tamanho )
+{
+	procura_e_reseta(var, nivel_escopo,tamanho );
+}
+
+void procura_e_reseta(string var, int nivel, int tamanho )
+{
+	if(nivel == -1)
+	{
+		yyerror("Variavel não inicializada");
+	}
+	else
+	{
+		vector<meta_variavel> list_meta_var = escopo_list[nivel].back().variaveis;	
+		pair<bool, int> position = isIn(var, list_meta_var);
+		if(position.first)
+		{	
+			escopo_list[nivel].back().variaveis[position.second].orig_name = "__TEMP__";
+			nova_meta_var_string(var, tamanho);
+		}
+		else
+		{	
+			nivel--;
+			procura_e_reseta(var,nivel, tamanho );
 		}
 	}
 }
@@ -561,11 +983,83 @@ string nova_meta_var(string var, string tipo) //Cria uma nova variavel (não-tem
 	}
 	else
 	{	
+		if(tipo == "char[]"){
+			
+			meta_variavel nova_meta_var;
+			nova_meta_var.temp_name = geraVar();
+			nova_meta_var.orig_name = var;
+			nova_meta_var.tamanho = 0;
+			nova_meta_var.tipo = "char";
+			nova_meta_var.tipoReal = "string";
+			escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+			return nova_meta_var.temp_name;
+
+		}
+		else{
+			meta_variavel nova_meta_var;
+			nova_meta_var.temp_name = geraVar();
+			nova_meta_var.orig_name = var;
+			nova_meta_var.tipo = tipo;
+			escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+			return nova_meta_var.temp_name;
+		}
+	}
+}
+string nova_meta_var_string(string var, int tamanho) //Cria uma nova variavel string(não-temp)
+{
+	Escopo escopo = escopo_list[nivel_escopo].back();
+	pair<bool, int> retorno = isIn(var, escopo.variaveis);
+	if(retorno.first)
+	{
+		yyerror("Ja existe uma variavel com esse nome");
+	}
+	else
+	{	
+		meta_variavel nova_meta_var;
+		nova_meta_var.temp_name = geraVar();
+		nova_meta_var.orig_name = var;
+		nova_meta_var.tipo = "char";
+		nova_meta_var.tipoReal = "string";
+		nova_meta_var.tamanho = tamanho;
+		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+		return nova_meta_var.temp_name;
+	}
+}
+string nova_global_meta_var(string var, string tipo) //Cria uma nova variavel (não-temp)
+{
+	Escopo escopo = escopo_list[0].back();
+	pair<bool, int> retorno = isIn(var, escopo.variaveis);
+	if(retorno.first)
+	{
+		yyerror("Ja existe uma variavel no escopo global com esse nome");
+	}
+	else
+	{	
 		meta_variavel nova_meta_var;
 		nova_meta_var.temp_name = geraVar();
 		nova_meta_var.orig_name = var;
 		nova_meta_var.tipo = tipo;
-		escopo_list[nivel_escopo].back().variaveis.push_back(nova_meta_var);
+		escopo_list[0].back().variaveis.push_back(nova_meta_var);
+		return nova_meta_var.temp_name;
+	}
+}
+string nova_global_meta_var_string(string var, int tamanho) //Cria uma nova variavel (não-temp)
+{
+	Escopo escopo = escopo_list[0].back();
+	pair<bool, int> retorno = isIn(var, escopo.variaveis);
+	if(retorno.first)
+	{
+		yyerror("Ja existe uma variavel com esse nome");
+	}
+	else
+	{	
+		meta_variavel nova_meta_var;
+		nova_meta_var.temp_name = geraVar();
+		nova_meta_var.orig_name = var;
+		nova_meta_var.tipo = "char";
+		nova_meta_var.tipoReal = "string";
+		nova_meta_var.tamanho = tamanho;
+		escopo_list[0].back().variaveis.push_back(nova_meta_var);
 		return nova_meta_var.temp_name;
 	}
 }
@@ -597,6 +1091,38 @@ string aritmeticoTraducao(atributos $$, atributos $1, atributos $2, atributos $3
 	
 	return traducao.str();
 }
+
+string relacionalTraducao(atributos $$, atributos $1, atributos $2, atributos $3){	
+	stringstream traducao;
+	if(($1.tipo == "int") & ($3.tipo == "float"))
+	{
+		traducao << $1.traducao << $3.traducao;
+		
+		string a = nova_temp_meta_var("int");
+		
+		traducao << "\t" << a << " = (int)" << $3.label << ";\n"; 
+		traducao << "\t" << $$.label <<" = " << a << " "<<$2.traducao<<" " << $3.label<< ";\n";
+		return traducao.str();
+	}
+	if(($1.tipo == "float") & ($3.tipo == "int"))
+	{
+		traducao << $1.traducao << $3.traducao;
+		
+		string a = nova_temp_meta_var("int");
+		
+		traducao << "\t" << a << " = (int)" << $1.label << ";\n"; 
+		traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << a<< ";\n";
+		return traducao.str();
+	}
+	traducao << $1.traducao << $3.traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << $3.label<< ";\n";
+	
+	return traducao.str();
+}
+string logicoTraducao(atributos $$, atributos $1, atributos $2, atributos $3){	
+	stringstream traducao;
+	traducao << $1.traducao << $3.traducao << "\t" << $$.label <<" = " << $1.label << " "<<$2.traducao<<" " << $3.label<< ";\n";
+	return traducao.str();
+}
 ///* Funções que manipulam as operações *///
 void adicionaOperacoes(){
 	operacao op; 
@@ -606,6 +1132,8 @@ void adicionaOperacoes(){
 	op.tipoDireita = "int";		op.tipoEsquerda = "float";	op.tipoResultante = "float";	op.tipoReal = "float";	op.operacao = "ARITMETICO";
 	list_op.push_back(op);
 	op.tipoDireita = "float";	op.tipoEsquerda = "float";	op.tipoResultante = "float";	op.tipoReal = "float";	op.operacao = "ARITMETICO";
+	list_op.push_back(op);
+	op.tipoDireita = "string";	op.tipoEsquerda = "string";	op.tipoResultante = "char[]";	op.tipoReal = "string";	op.operacao = "ARITMETICO";
 	list_op.push_back(op);
 	//relacionais
 	op.tipoDireita = "int";		op.tipoEsquerda = "int";	op.tipoResultante = "int";		op.tipoReal = "bool";	op.operacao = "relacional";

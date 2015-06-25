@@ -1,17 +1,7 @@
 
 func main()
 {
+	for(true)
+		var a = 3;
 	var a = 3;
-	var b = 3;
-
-	for ( a == b)
-	{	
-		for ( a == b)
-		{
-			if (a == b)
-			{
-				a = a+b;
-			}
-		}
-	}
 }
