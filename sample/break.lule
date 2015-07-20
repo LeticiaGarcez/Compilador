@@ -1,0 +1,6 @@
+
+while(true)
+{
+	var ola = 4;
+	break;
+}
