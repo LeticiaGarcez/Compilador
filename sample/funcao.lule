@@ -1,0 +1,15 @@
+
+
+var c = 'c';
+
+var d  = 'o';
+
+d = c;
+
+
+func function(int c)
+{
+	return 3, 2;
+}
+
+function(d);

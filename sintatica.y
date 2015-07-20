@@ -757,9 +757,13 @@ CHAMA_FUNCAO
 
 				if(func.parametros.size() != $3.colLabels.size())
 					yyerror("Funcao espera quantidade de parametros diferentes");
+				//verificaChamadaFunc(func, colLabels)
 
 				for (int i = 0; i < func.parametros.size() && i < $3.colLabels.size(); i++)
 				{
+					variavel temp = useVarPorTempName($3.colLabels[i]);
+					if(func.parametros[i].tipoReal != temp.tipoReal)
+						yyerror("Passe o parametro corretamente, vei");
 					$$.traducao += "\t" + func.parametros[i].temp_name +" = "+ $3.colLabels[i]+";\n";
 				}
 				$$.traducao += "\t"+ func.temp_name+"();\n";
@@ -851,20 +855,23 @@ ATRIB 		:IDs TK_ATRIB OPs // a = 4;
  				for (int i = 0; (i < $1.colLabels.size()) && (i < $3.colLabels.size() ) ; i++)
 				{	
 					variavel varOp = useVarPorTempName($3.colLabels[i]);
-					if(varOp.isVet) {
+					variavel varId = use_var($1.colLabels[i], " ");
+					if(varOp.isVet && varId.isVet) {
 			 			resetaVector($1.colLabels[i], varOp.tipo ,varOp.colTamanhosLabels);
 						variavel var = use_var($1.colLabels[i], varOp.tipo);
 						$$.traducao += "\t"+ var.temp_name + " = " + varOp.temp_name+ ";\n"; 
 				 	}
-					else if(varOp.tipoReal == "string"){
+					else if(varOp.tipoReal == "string" && varId.tipoReal == "string"){
 						resetaString($1.colLabels[i], varOp.tamanho);
 						variavel var = use_var($1.colLabels[i], varOp.tipo);				
 						$$.traducao +="\t strcpy(" + var.temp_name + "," + varOp.temp_name+ ");\n";
 					}
-				 	else{
+				 	else if(varOp.tipoReal == varId.tipoReal) {
 						variavel var = use_var($1.colLabels[i], varOp.tipo);
 						$$.traducao +="\t" + var.temp_name + " = " + varOp.temp_name+ ";\n";
 					}
+					else
+						yyerror("usa essa merda direito");
 				}
 
  			}
@@ -1265,6 +1272,11 @@ BLOCO_FUNC 	: TK_ABRE COMANDOS RETORNO TK_FECHA
 				$$.traducao = $2.traducao;
 				$$.traducao += $3.traducao;
 				$$.colLabels = $3.colLabels;
+			}
+			| TK_ABRE RETORNO TK_FECHA 
+			{
+				$$.traducao = $2.traducao;
+				$$.colLabels = $2.colLabels;
 			}
 			| TK_ABRE COMANDOS TK_FECHA 
 			{
