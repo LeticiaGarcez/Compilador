@@ -9,7 +9,6 @@ switch(b+5-1)
 	case(4)
 	{
 		b = 5;
-		
 	}
 	defaut
 	{

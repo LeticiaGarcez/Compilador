@@ -1,0 +1,10 @@
+
+var int e = read;
+
+var char p = read;
+
+write("escreve");
+
+var string d = read;
+
+write(d);

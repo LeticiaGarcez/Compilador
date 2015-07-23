@@ -1,0 +1,9 @@
+
+var s = "nova string";
+
+s = s..4;
+s = s.."sda";
+
+var string d = read;
+
+s = d..s;

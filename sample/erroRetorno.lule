@@ -1,0 +1,5 @@
+
+func funcao() -> int
+{
+	return 4, 2;
+}

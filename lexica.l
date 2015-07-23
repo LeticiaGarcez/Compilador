@@ -61,7 +61,7 @@ BOOL "true"|"false"
 
 [<] 							{yylval.traducao = yytext; return TK_MENOR;}
 [>] 							{yylval.traducao = yytext; return TK_MAIOR;}
-"=!"							{yylval.traducao = yytext; return TK_DIFERENTE; }
+"!="							{yylval.traducao = yytext; return TK_DIFERENTE; }
 "=="							{yylval.traducao = yytext; return TK_IGUAL; }
 
 "and" 							{yylval.traducao = yytext; return TK_AND;}

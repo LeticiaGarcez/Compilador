@@ -1,0 +1,7 @@
+
+var a  = 4 + true;
+
+a = 4 == 4 == 5;
+
+var e = 4;
+e = "true";

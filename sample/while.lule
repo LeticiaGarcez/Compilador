@@ -1,0 +1,10 @@
+do
+{
+	var a = 4;
+}
+while(true);
+
+while(false and false and true)
+{
+	var a = 4;
+}

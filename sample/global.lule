@@ -1,0 +1,19 @@
+
+global var o = 4;
+var a = 4;
+
+{
+	global var c  = 3;
+}
+
+write(c);
+
+
+func funcao()
+{
+	global var d = 2;
+
+}
+
+funcao();
+write(d);

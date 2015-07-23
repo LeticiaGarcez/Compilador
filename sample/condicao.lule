@@ -1,0 +1,15 @@
+
+if(true)
+{
+	var a = 4;
+}elif(false)
+{
+	var d = 4;
+}elif(4 == 5)
+{
+	var d = 4;
+}
+else
+{
+	var d = 5;
+}

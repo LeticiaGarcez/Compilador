@@ -5,4 +5,18 @@ for (a == 4)
 	a = 3;
 }
 
-write(a);
+for (var a = 0 ; a < 3 ; a++)
+{
+	write("ola");
+}
+
+for(a == 4)
+	break;
+
+for (true)
+	if(true){
+		break;
+	}
+
+for(true)
+	continue;

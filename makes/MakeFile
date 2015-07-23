@@ -1,0 +1,21 @@
+all: 	
+		lex ../lexica.l
+		yacc -d ../sintatica.y
+		g++ -o exe y.tab.c -lfl
+
+		./exe < ../sample/break.lule > ../resultados/break.c
+		./exe < ../sample/for.lule > ../resultados/for.c
+		./exe < ../sample/switch.lule > ../resultados/switch.c
+		./exe < ../sample/vetor.lule > ../resultados/vetor.c
+		./exe < ../sample/string.lule > ../resultados/string.c
+		./exe < ../sample/funcao.lule > ../resultados/funcao.c
+		./exe < ../sample/while.lule > ../resultados/while.c
+		./exe < ../sample/contas.lule > ../resultados/contas.c
+		./exe < ../sample/i-o.lule > ../resultados/i-o.c
+		./exe < ../sample/bloco.lule > ../resultados/bloco.c
+		./exe < ../sample/condicao.lule > ../resultados/condicao.c
+		./exe < ../sample/global.lule > ../resultados/global.c
+		./exe < ../sample/erroVetor.lule > ../resultados/erroVetor.c
+		./exe < ../sample/erroParametros.lule > ../resultados/erroParametros.c
+		./exe < ../sample/erroOperacao.lule > ../resultados/erroOperacao.c
+		./exe < ../sample/erroRetorno.lule > ../resultados/erroRetorno.c

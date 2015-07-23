@@ -1,0 +1,15 @@
+var c = 3;
+
+func abc() -> int, int, int
+{
+	
+ 	var c = 3 + 4;
+ 	func b()
+ 	{
+ 		var d = 5;
+ 		return 4, 3, 6;
+ 	}
+ 	return b();
+}
+
+var a , b, d = abc();

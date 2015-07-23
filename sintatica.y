@@ -144,7 +144,7 @@ void printAssinaturas(); // assinaturas de funções
 void printFuncoes();	 // tradução das funções
 
 //Erros
-
+void erro();
 
 int yylex(void);
 void yyerror(string);
@@ -190,6 +190,7 @@ int vet_posicao_atual;
 
 S 			: DESCE_ESCOPO COMANDOS SOBE_ESCOPO
 			{
+				erro();
 				cout << "/*Compilador FOCA*/\n" << "#include <iostream> \n#include <string.h> \n#include <stdio.h>\nusing namespace std;\n" << endl;
 				printAssinaturas();
 				printDeclaracoes();
@@ -483,6 +484,8 @@ ARITMETICO	: ARITMETICO OP_ARITMETICO ARITMETICO
 			{ 
 
 				variavel var;
+				if(($1.colLabels.size() <= 0 && $1.label == "" )||($3.colLabels.size() <= 0 && $3.label == "" ) )
+					yyerror("Esta fazendo operação com funcao void");
 				if($1.colLabels.size() > 0)
 				{
 					var = useVarPorTempName($1.colLabels[0]);
@@ -517,6 +520,9 @@ ARITMETICO2	: ARITs OP_ARITMETICO2 ARITs
 			{
 
 				variavel var;
+
+				if(($1.colLabels.size() <= 0 && $1.label == "" )||($3.colLabels.size() <= 0 && $3.label == "" ) )
+					yyerror("Esta fazendo operação com funcao void");
 				if($1.colLabels.size() > 0)
 				{
 					var = useVarPorTempName($1.colLabels[0]);
@@ -559,6 +565,9 @@ CONCATENACAO: CONCATENACAO OP_CONCAT CONCATENACAO
 			{
 
 				variavel varOp;
+
+				if(($1.colLabels.size() <= 0 && $1.label == "" )||($3.colLabels.size() <= 0 && $3.label == "" ) )
+					yyerror("Esta fazendo operação com funcao void");
 				if($1.colLabels.size() > 0)
 				{
 					varOp = useVarPorTempName($1.colLabels[0]);
@@ -577,14 +586,15 @@ CONCATENACAO: CONCATENACAO OP_CONCAT CONCATENACAO
 
 				$$.tipo = "char[]";
 				$$.tipoReal = "string";
-				variavel var = nova_temp_var_string( $1.tamanho + $3.tamanho); 
+				variavel var = nova_temp_var_string( 1024); 
 				$$.label = var.temp_name; 
-				$$.tamanho = $1.tamanho + $3.tamanho;
-				if($1.tipoReal == "string" & $3.tipoReal == "string")
+				if($1.tipoReal == "string" & $3.tipoReal == "string"){
+					$$.tamanho = $1.tamanho + $3.tamanho;
 					$$.traducao = $1.traducao + $3.traducao +"\n\t strcat("+$$.label+","+$1.label+");\n\t strcat("+$$.label+","+$3.label+");\n"; 
-				else
-					yyerror("Não, Braida, ainda não fiz isso");
-				//$$.label = nova_var_string()
+				}else{
+					$$.tamanho = 1024;
+					$$.traducao = $1.traducao + $3.traducao +"\n\t strcat("+$$.label+","+$1.label+");\n\t strcat("+$$.label+","+$3.label+");\n"; 
+				}//$$.label = nova_var_string()
 			}
 			|OP 
 			;
@@ -596,6 +606,10 @@ RELACIONAL	: RELs OP_RELACIONAL RELs
 			{
 
 				variavel var;
+
+
+				if(($1.colLabels.size() <= 0 && $1.label == "" )||($3.colLabels.size() <= 0 && $3.label == "" ) )
+					yyerror("Esta fazendo operação com funcao void");
 				if($1.colLabels.size() > 0)
 				{
 					var = useVarPorTempName($1.colLabels[0]);
@@ -635,6 +649,9 @@ LOGICO		: LOGs OP_LOGICO LOGs
 			{ 
 
 				variavel var;
+
+				if(($1.colLabels.size() <= 0 && $1.label == "" )||($3.colLabels.size() <= 0 && $3.label == "" ) )
+					yyerror("Esta fazendo operação com funcao void");
 				if($1.colLabels.size() > 0)
 				{
 					var = useVarPorTempName($1.colLabels[0]);
@@ -754,7 +771,6 @@ CHAMA_FUNCAO
 			{
 				$$.traducao = $3.traducao;
 				funcao func = usaFuncao($1.label);
-
 				if(func.parametros.size() != $3.colLabels.size())
 					yyerror("Funcao espera quantidade de parametros diferentes");
 				//verificaChamadaFunc(func, colLabels)
@@ -767,6 +783,20 @@ CHAMA_FUNCAO
 					$$.traducao += "\t" + func.parametros[i].temp_name +" = "+ $3.colLabels[i]+";\n";
 				}
 				$$.traducao += "\t"+ func.temp_name+"();\n";
+				for (int j = 0; j < func.retornos.size(); j++)
+				{
+					$$.colLabels.push_back(func.retornos[j].temp_name);
+				}
+				$$.label = "";
+			}
+			| TK_ID '(' ')'
+			{
+				funcao func = usaFuncao($1.label);
+
+				if(func.parametros.size() != 0)
+					yyerror("Funcao espera quantidade de parametros diferentes");
+				
+				$$.traducao = "\t"+ func.temp_name+"();\n";
 				for (int j = 0; j < func.retornos.size(); j++)
 				{
 					$$.colLabels.push_back(func.retornos[j].temp_name);
@@ -871,7 +901,7 @@ ATRIB 		:IDs TK_ATRIB OPs // a = 4;
 						$$.traducao +="\t" + var.temp_name + " = " + varOp.temp_name+ ";\n";
 					}
 					else
-						yyerror("usa essa merda direito");
+						yyerror("atribua corretamente");
 				}
 
  			}
@@ -1040,6 +1070,8 @@ IDs 		: IDs ',' TK_ID
 			}
 			| TK_ID 
 			{ 
+				vector<string> vazio;
+				$$.colLabels = vazio;
 				$$.colLabels.push_back($1.label); 
 			}
 
@@ -1185,7 +1217,8 @@ DECLARA_FUNC
 				if($4.colLabels.size() != $3.colLabels.size())
 					yyerror("Esperando um numero diferente de retornos");
 				for (int i = 0; i < $3.colLabels.size(); ++i)
-				{		
+				{	
+					//fazer verificação de tipo...
 					$$.traducao += "\t"+$3.colLabels[i]+" = "+ $4.colLabels[i]+";\n";
 				}
 
@@ -1296,12 +1329,39 @@ RETORNOS 	: RETORNOS ',' OPERACAO
 				$$.traducao = $1.traducao;
 				$$.traducao += $3.traducao;
 				$$.colLabels = $1.colLabels;
-				$$.colLabels.push_back($3.label);
+				if($1.label== "" && $3.colLabels.size() != 0)
+				{
+					for (int i = 0; i < $1.colLabels.size(); ++i)
+					{
+						$$.colLabels.push_back($1.colLabels[i]);			
+					}
+				}else if ($1.label != "")
+				{
+					$$.colLabels.push_back($3.label);
+				}
 			}
 			| OPERACAO
 			{
+		
+				vector<string> vazio;
+				$$.colLabels = vazio;
+				
+				
 				$$.traducao = $1.traducao;
-				$$.colLabels.push_back($1.label);
+				if($1.label == "")
+				{
+					if($1.colLabels.size() > 0)
+					{	
+						for (int i = 0; i < $1.colLabels.size(); ++i)
+						{
+							$$.colLabels.push_back($1.colLabels[i]);			
+						}
+					}
+				}
+				else
+				{
+					$$.colLabels.push_back($1.label);
+				}
 			}
 
 /* *******
@@ -1316,12 +1376,12 @@ CMD_CIN 	:  TK_VAR TIPO TK_ID TK_ATRIB TK_READ
 					nova_var_string($3.label, 0);
  					resetaString($3.label, 1024);
  					variavel var = use_var($3.label, $3.tipo);
-					$$.traducao = "\t cin << " + var.temp_name + " ;\n";
+					$$.traducao = "\t cin >> " + var.temp_name + " ;\n";
 				}
 				else
 				{
 	 				$$.label = nova_var($3.label, $2.tipo);
-					$$.traducao = "\t cin << " + $$.label + " ;\n";
+					$$.traducao = "\t cin >> " + $$.label + " ;\n";
 				}
 			}
 			| TK_GLOBAL TK_VAR TIPO TK_ID TK_ATRIB TK_READ// global var int a;
@@ -1330,11 +1390,11 @@ CMD_CIN 	:  TK_VAR TIPO TK_ID TK_ATRIB TK_READ
 					nova_var_string($4.label, 0);
  					resetaString($4.label, 1024);
  					variavel var = use_var($4.label, $4.tipo);
-					$$.traducao = "\tcin << " + var.temp_name + " ;\n";	
+					$$.traducao = "\tcin >> " + var.temp_name + " ;\n";	
 				}else
 				{
 	 				$$.label = nova_var($4.label, $3.tipo);
-					$$.traducao = "\tcin << " + $$.label + " ;\n";
+					$$.traducao = "\tcin >> " + $$.label + " ;\n";
 				}
  			}
 			| TK_READ '('TK_ID')'
@@ -1403,7 +1463,7 @@ INDEXs		: INDEXs '['ARITMETICO']'
 				vet_posicao_atual = 1;
 				$$.label = nova_temp_var("int");
 				$$.traducao = $2.traducao; 
-				$$.traducao += "\t"+ $$.label +" = "+ var.colTamanhosLabels[vet_posicao_atual] +" * "+ $2.label + "\n";
+				$$.traducao += "\t"+ $$.label +" = "+ var.colTamanhosLabels[vet_posicao_atual] +" * "+ $2.label + ";\n";
 			} 
 			;
 
@@ -1425,6 +1485,8 @@ vector< vector<Escopo> > escopo_list;
 vector<operacao> list_op;
 int yyparse();
 string geraVar();
+
+string msgError = "";
 int main( int argc, char* argv[] )
 {
 	adicionaOperacoes();
@@ -1433,8 +1495,19 @@ int main( int argc, char* argv[] )
 }
 void yyerror( string MSG )
 {
-	cout << MSG << endl;
-	exit (0);
+	stringstream erro;
+	erro << msgError << '\n';
+	erro << MSG << '\n';
+	msgError = erro.str();
+}
+
+void erro()
+{
+	if (msgError != "")
+	{
+		cout << msgError << endl;
+		exit (0);
+	}
 }
 ///* Funções que manipulam Escopo *///
 void desceEscopo(bool isIf)
@@ -1675,10 +1748,8 @@ variavel useVarPorTempName(string var)
 variavel procuraVarPorTempName(string var, int nivel)
 {
 
-
 	if(nivel == -1)
 	{
-		printDeclaracoes();
 		yyerror("Variavel não inicializada");
 	}
 	else
@@ -1944,26 +2015,28 @@ pair<bool, int> isInFuncao(string assinatura, vector<funcao> L)
 
 funcao procuraFuncao(string assinatura, int nivel)
 {
-	
 	if(nivel < 0)
 		yyerror("Funcao nao foi declarada");
+
 	if(escopo_list.size() <= nivel){
 		nivel--;
 		procuraFuncao(assinatura, nivel);
 	}		
 
-	vector<funcao> list_func = escopo_list[nivel].back().funcoes;	
-	pair<bool, int> retorno = isInFuncao(assinatura, list_func);
-	if(retorno.first)
+	for (int i = 0; i < escopo_list[nivel].size(); ++i)
 	{
-		return escopo_list[nivel].back().funcoes[retorno.second];
-	}
-	else
-	{
-		nivel--;
-		procuraFuncao(assinatura, nivel);
-	}
 
+		vector<funcao> list_func = escopo_list[nivel][i].funcoes;	
+
+		pair<bool, int> retorno = isInFuncao(assinatura, list_func);		
+		if(retorno.first)
+		{
+			return escopo_list[nivel][i].funcoes[retorno.second];
+		}
+	}
+	nivel--;
+	procuraFuncao(assinatura, nivel);
+	
 }
 funcao novaFuncao(string assinatura, vector<string> parametros)
 {
@@ -1980,7 +2053,7 @@ funcao novaFuncao(string assinatura, vector<string> parametros)
 	{
 		for (int i = 0; i < parametros.size(); i++)
 		{
-			colParametros.push_back(procuraVarPorTempName(parametros[i], nivel_escopo));
+			colParametros.push_back(useVarPorTempName(parametros[i]));
 		}
 
 		nova_funcao.parametros = colParametros;
@@ -2009,7 +2082,7 @@ void atualizaFuncRetorno(vector<string> retorno)
 	vector<variavel> colRetornos;	
 	for (int j = 0; j < retorno.size(); j++)
 	{
-		colRetornos.push_back(procuraVarPorTempName(retorno[j], nivel_escopo));
+		colRetornos.push_back(useVarPorTempName(retorno[j]));
 	}
 
 	escopo_list[nivel_escopo].back().funcoes.back().retornos = colRetornos;
@@ -2151,7 +2224,7 @@ void printDeclaracoes(){
 			int j;
 			for (j = 0; j < list_var.size(); j++)
 			{
-				if(list_var[j].tipo == "char" & list_var[j].tamanho > 0)
+				if(list_var[j].tipoReal == "string" & list_var[j].tamanho > 0)
 					cout <<"\t"<< list_var[j].tipo << " " << list_var[j].temp_name<<'['<< list_var[j].tamanho<<']' << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_var[j].orig_name << endl;
 				else if (list_var[j].isVet)
 					cout <<"\t//"<< list_var[j].tipo << " " << list_var[j].temp_name << ";" << "  // "<< "nivel_escopo:" << i <<"  "<< list_var[j].orig_name << endl;	
@@ -2173,7 +2246,7 @@ void printAssinaturas(){
 			int j;
 			for (j = 0; j < lista_funcao.size(); j++)
 			{
-				cout <<"\tvoid "<< lista_funcao[j].temp_name << "();\n";
+				cout <<"\tvoid "<< lista_funcao[j].temp_name << "();// nivel/numero" <<i <<"/"<<h << " assinatura " << lista_funcao[j].assinatura << "\n";
 			}
 		}		
 	}

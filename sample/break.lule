@@ -1,6 +1,13 @@
 
-while(true)
-{
-	var ola = 4;
-	break;
+while (true){
+	while(true)
+	{
+		var ola = 4;
+		if ( ola == 4 ){
+			break;
+		}
+		if ( ola != 4 ){
+			super break;
+		}
+	}
 }

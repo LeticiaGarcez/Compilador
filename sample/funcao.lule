@@ -1,15 +1,30 @@
 
-
-var c = 'c';
-
-var d  = 'o';
-
-d = c;
-
-
-func function(int c)
+func funcao()
 {
-	return 3, 2;
+	return 4, 2;
 }
 
-function(d);
+var a = funcao();
+
+
+func funcao2()
+{
+	func funcao()
+	{
+		var a = 4 + 5;
+		return a;
+	}
+
+	return funcao();
+}
+
+a = a + funcao2() + funcao();
+
+
+func funcao3(int a, int d) -> int
+{
+	a = 4;
+	return a;
+}
+
+a = funcao3(4, 3);

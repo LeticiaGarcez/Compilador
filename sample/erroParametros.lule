@@ -1,0 +1,9 @@
+
+func funcao(int a, int b)
+{
+	
+}
+
+funcao(3);
+
+funcao('x', 2);
